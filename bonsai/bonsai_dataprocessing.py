@@ -1066,9 +1066,9 @@ class SCData:
         except FileNotFoundError:
             if noDataNeeded:
                 print("filenamesData: {}".format(filenamesData))
-                mp_print("WARNING: File {} not found.".format(self.data_path(filenameMeans)), WARNING=True)
-                mp_print("WARNING: File {} not found.".format(self.data_path(filenameStds)), WARNING=True)
-                mp_print("Did not find data-file, but is not (strictly) needed now.")
+                # mp_print("WARNING: File {} not found.".format(self.data_path(filenameMeans)), WARNING=True)
+                # mp_print("WARNING: File {} not found.".format(self.data_path(filenameStds)), WARNING=True)
+                mp_print("Did not find data-file, but is not (strictly) needed now.", WARNING=True)
                 originalData.ltqs = None
                 originalData.ltqsVars = None
                 self.metadata.nCells = None
@@ -1077,8 +1077,8 @@ class SCData:
                 ltqStdsFound = False
                 n_genes_orig = None
             else:
-                mp_print("WARNING: File {} not found.".format(self.data_path(filenameMeans)), WARNING=True)
-                mp_print("WARNING: File {} not found.".format(self.data_path(filenameStds)), WARNING=True)
+                # mp_print("WARNING: File {} not found.".format(self.data_path(filenameMeans)), WARNING=True)
+                # mp_print("WARNING: File {} not found.".format(self.data_path(filenameStds)), WARNING=True)
                 exit("Data-file was not found!")
         if mpiInfo.rank != 0:
             return None, None
@@ -2210,9 +2210,17 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
                  "we are assuming the input-files are Sanity output.\n"
                  "If this is not the desired behavior, change this argument in the Bonsai config-yaml file.")
         meanspath = os.path.join(data_folder, 'delta_vmax.txt')
+        if not os.path.exists(meanspath):
+            mp_print("File {} not found.".format(meanspath), WARNING=True)
         stdspath = os.path.join(data_folder, 'd_delta_vmax.txt')
+        if not os.path.exists(stdspath):
+            mp_print("File {} not found.".format(stdspath), WARNING=True)
         gene_variancepath = os.path.join(data_folder, 'variance_vmax.txt')
+        if not os.path.exists(gene_variancepath):
+            mp_print("File {} not found.".format(gene_variancepath), WARNING=True)
         gene_meanspath = os.path.join(data_folder, 'mu_vmax.txt')
+        if not os.path.exists(gene_meanspath):
+            mp_print("File {} not found.".format(gene_meanspath), WARNING=True)
         # Check if correct version of Sanity was run
         if not os.path.exists(meanspath):
             if os.path.exists(os.path.join(data_folder, 'delta.txt')):
