@@ -8,6 +8,15 @@ The *Bonsai* tree-reconstruction was originally designed for the analysis of sin
 When using *Bonsai* for scRNAseq-data, we highly recommend using *Sanity* for processing of the raw counts [Sanity's GitHub-page](https://github.com/jmbreda/Sanity), or to upload your data to our [single-cell pipeline](https://bonsai.unibas.ch). If running *Bonsai* after *Sanity*, *Bonsai* just requires the files in the output-directory created by *Sanity*, and can be run with the argument `--input_is_sanity_output True`. 
 **IMPORTANT: Make sure to run *Sanity* with the flags `-e 1 --max_v true`**. This makes sure that we get *Sanity*'s extended output, and that it contains the inferred gene expression values corresponding to the maximum posterior guess of the gene-variances. See the SI of the *Bonsai*-publication for an extensive discussion of why this is the preferred mode of running *Sanity* when getting *Bonsai* input.
 
+Example Sanity-command:
+```
+Sanity -n <number_of_threads> -f <path_to_gene_table.tsv> -d <path_to_output_folder> -e true --max_v true
+```
+or with an mtx-file:
+```
+Sanity -n <number_of_threads> -f <path_to_gene_table.mtx> -d <path_to_output_folder> -e true --max_v true -mtx_genes <path_to_gene_ids.tsv> -mtx_cells <path_to_cell_ids.tsv>
+```
+
 ### *Bonsai* on general datatypes
 If running *Bonsai* based on other data, read the Section on [Running *Bonsai* on other data-types](https://github.com/dhdegroot/Bonsai-data-representation#running-bonsai-on-other-data-types).
 
