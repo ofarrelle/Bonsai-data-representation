@@ -948,18 +948,29 @@ class SCData:
                     annot_input.columns = ['Annotation {}_{}'.format(ind_file, ind) for ind in
                                            range(annot_input.shape[1])]
                 cs_id_to_ind = {cell_id: ind for ind, cell_id in enumerate(annot_input.index)}
-                cs_inds = np.array([cs_id_to_ind[cs_id] for cs_id in self.metadata.csIds])
-                annotation_df = annot_input.iloc[cs_inds, :]
-                cell_or_cs = 'cs'
+                try:
+                    cs_inds = np.array([cs_id_to_ind[cs_id] for cs_id in self.metadata.csIds])
+                    annotation_df = annot_input.iloc[cs_inds, :]
+                    cell_or_cs = 'cs'
+                except KeyError as e:
+                    mp_print("The cell-ID {} was present in the data but not in annotation-file '{}'. "
+                             "Please check this. "
+                             "For now, we are discarding this annotation-file.".format(e, filename), WARNING=True)
+                    annotation_df = None
             elif annot_input.shape[0] in [self.metadata.nCells - 1, self.metadata.nCells]:
                 if annot_input.shape[0] == (self.metadata.nCells - 1):
                     annot_input = pd.read_csv(filepath, header=None, index_col=0, delimiter=delim)
                     annot_input.columns = ['Annotation {}_{}'.format(ind_file, ind) for ind in
                                            range(annot_input.shape[1])]
                 cell_id_to_ind = {cell_id: ind for ind, cell_id in enumerate(annot_input.index)}
-                cell_inds = np.array([cell_id_to_ind[cell_id] for cell_id in self.metadata.cellIds])
-                annotation_df = annot_input.iloc[cell_inds, :]
-                cell_or_cs = 'cell'
+                try:
+                    cell_inds = np.array([cell_id_to_ind[cell_id] for cell_id in self.metadata.cellIds])
+                    annotation_df = annot_input.iloc[cell_inds, :]
+                    cell_or_cs = 'cell'
+                except KeyError as e:
+                    mp_print("The cell-ID {} was present in the data but not in annotation-file '{}'. "
+                             "Please check this. "
+                             "For now, we are discarding this annotation-file.".format(e, filename), WARNING=True)
             else:
                 mp_print("Annotation-file '{}' has a number of rows that is not equal to the number of cells (or "
                          "cellstates) in the dataset. Please check this. For now, we are discarding this "
