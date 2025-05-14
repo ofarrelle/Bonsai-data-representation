@@ -960,28 +960,43 @@ class SCData:
                 cell_inds = np.array([cell_id_to_ind[cell_id] for cell_id in self.metadata.cellIds])
                 annotation_df = annot_input.iloc[cell_inds, :]
                 cell_or_cs = 'cell'
-            if filename[:4] == 'mat_':
-                mat_label = ''.join(filename[4:].split('.')[:-1])
-                data_matrices[mat_label] = annotation_df.T
             else:
-                # Determine which columns are numerical values
-                new_colnames = []
-                for ind, col in enumerate(annotation_df.columns):
-                    if np.all(annotation_df[col].apply(is_numeric)):
-                        annotation_df[col] = annotation_df[col].astype(float)
-                        new_colnames.append('annot_num_{}'.format(col.replace(' ', '_')))
-                    else:
-                        try:
-                            annotation_df[col] = annotation_df[col].fillna("NaN")
-                        except:
-                            print("Could not convert nans in column {}.".format(col))
-                        annotation_df[col] = pd.Categorical(annotation_df[col])
-                        new_colnames.append('annot_{}'.format(col.replace(' ', '_')))
-                annotation_df.columns = new_colnames
-                if cell_or_cs == 'cell':
-                    annotation_dfs_cell.append(annotation_df)
+                mp_print("Annotation-file '{}' has a number of rows that is not equal to the number of cells (or "
+                         "cellstates) in the dataset. Please check this. For now, we are discarding this "
+                         "annotation-file".format(filename), WARNING=True)
+                annotation_df = None
+            if annotation_df is not None:
+                if filename[:4] == 'mat_':
+                    mat_label = ''.join(filename[4:].split('.')[:-1])
+                    data_matrices[mat_label] = annotation_df.T
                 else:
-                    annotation_dfs_cs.append(annotation_df)
+                    # Determine which columns are numerical values
+                    new_colnames = []
+                    cols_to_add = []
+                    colnames_to_add = []
+                    annotation_df = annotation_df.drop(columns=annotation_df.columns[annotation_df.isna().all()])
+                    for ind, col in enumerate(annotation_df.columns):
+                        if np.all(annotation_df[col].apply(is_numeric)):
+                            annotation_df[col] = annotation_df[col].astype(float)
+                            new_colnames.append('annot_num_{}'.format(col.replace(' ', '_').replace('-', '_')))
+                            if len(np.unique(annotation_df[col])) < 20:
+                                # In this case, add a colname to the annotation that treats these as categorical annotation
+                                cols_to_add.append(['c_{}'.format(orig_annot) for orig_annot in annotation_df[col]])
+                                colnames_to_add.append('annot_categorized_{}'.format(col.replace(' ', '_').replace('-', '_')))
+                        else:
+                            try:
+                                annotation_df[col] = annotation_df[col].fillna("NaN")
+                            except:
+                                print("Could not convert nans in column {}.".format(col))
+                            annotation_df[col] = pd.Categorical(annotation_df[col])
+                            new_colnames.append('annot_{}'.format(col.replace(' ', '_').replace('-', '_')))
+                    annotation_df.columns = new_colnames
+                    for name, vector in zip(colnames_to_add, cols_to_add):
+                        annotation_df[name] = vector
+                    if cell_or_cs == 'cell':
+                        annotation_dfs_cell.append(annotation_df)
+                    else:
+                        annotation_dfs_cs.append(annotation_df)
 
         if len(annotation_dfs_cell) == 0:
             annotation_dfs_cell = pd.DataFrame({'annot_default': np.array(['default'] * self.metadata.nCells)},
