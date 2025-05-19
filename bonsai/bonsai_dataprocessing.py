@@ -989,18 +989,18 @@ class SCData:
                     for ind, col in enumerate(annotation_df.columns):
                         if np.all(annotation_df[col].apply(is_numeric)):
                             annotation_df[col] = annotation_df[col].astype(float)
-                            new_colnames.append('annot_num_{}'.format(col.replace(' ', '_').replace('-', '_')))
+                            new_colnames.append('annot_num_{}'.format(col.replace(' ', '_').replace('-', '_').replace('.', '_')))
                             if len(np.unique(annotation_df[col])) < 20:
                                 # In this case, add a colname to the annotation that treats these as categorical annotation
                                 cols_to_add.append(['c_{}'.format(orig_annot) for orig_annot in annotation_df[col]])
-                                colnames_to_add.append('annot_categorized_{}'.format(col.replace(' ', '_').replace('-', '_')))
+                                colnames_to_add.append('annot_categorized_{}'.format(col.replace(' ', '_').replace('-', '_').replace('.', '_')))
                         else:
                             try:
                                 annotation_df[col] = annotation_df[col].fillna("NaN")
                             except:
                                 print("Could not convert nans in column {}.".format(col))
                             annotation_df[col] = pd.Categorical(annotation_df[col])
-                            new_colnames.append('annot_{}'.format(col.replace(' ', '_').replace('-', '_')))
+                            new_colnames.append('annot_{}'.format(col.replace(' ', '_').replace('-', '_').replace('.', '_')))
                     annotation_df.columns = new_colnames
                     for name, vector in zip(colnames_to_add, cols_to_add):
                         annotation_df[name] = vector
@@ -2289,7 +2289,7 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
     if os.path.exists(stdspath):
         # In this case, we read in standard deviations, and use them to estimate a signal-to-noise ratio for each gene.
         ltqStdsFound = True
-        zscoreCutoffSq = zscoreCutoff ** 2 if zscoreCutoff > 0 else zscoreCutoff
+        zscoreCutoffSq = zscoreCutoff ** 2 if zscoreCutoff > 0 else 0.0
         if sanityOutput:
             # If input is sanity output, we know that we get the posterior means and variances, instead of the
             # likelihood means and variances. So the posteriors can immediately be used for calculating the
@@ -2420,7 +2420,11 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
             reader_means = csv.reader(fmeans, delimiter='\t')
             for row_ind in range(myTasks[0], myTasks[1]):
                 means = np.asarray(next(reader_means), dtype='float')
-                tmp_means.append(means)
+                inferred_gene_var = np.var(means)
+                if inferred_gene_var > 0.0:
+                    tmp_means.append(means)
+                    genes_to_keep.append(row_ind)
+                    tmp_gene_vars.append(inferred_gene_var)
                 if (row_ind - myTasks[0]) == print_ind:
                     print_ind *= 2
                     mp_print("Processing data for the the %d-th feature out of %d, this took %.2f seconds." % (
@@ -2434,8 +2438,8 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
             ltqs = np.vstack(tmp_means)
             ltqsVars = np.ones(ltqs.shape) * 1e-6
             nGenes = ltqs.shape[0]
-            genes_to_keep = np.arange(nGenes)
-            gene_vars = np.var(ltqs, axis=1)
+            genes_to_keep = np.array(genes_to_keep)
+            gene_vars = np.array(tmp_gene_vars)
 
     if mpiInfo.size > 1:
         # Make all processes communicate the read-in data with process 0.
