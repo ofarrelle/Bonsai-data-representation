@@ -989,18 +989,18 @@ class SCData:
                     for ind, col in enumerate(annotation_df.columns):
                         if np.all(annotation_df[col].apply(is_numeric)):
                             annotation_df[col] = annotation_df[col].astype(float)
-                            new_colnames.append('annot_num_{}'.format(col.replace(' ', '_').replace('-', '_')))
+                            new_colnames.append('annot_num_{}'.format(col.replace(' ', '_').replace('-', '_').replace('.', '_')))
                             if len(np.unique(annotation_df[col])) < 20:
                                 # In this case, add a colname to the annotation that treats these as categorical annotation
                                 cols_to_add.append(['c_{}'.format(orig_annot) for orig_annot in annotation_df[col]])
-                                colnames_to_add.append('annot_categorized_{}'.format(col.replace(' ', '_').replace('-', '_')))
+                                colnames_to_add.append('annot_categorized_{}'.format(col.replace(' ', '_').replace('-', '_').replace('.', '_')))
                         else:
                             try:
                                 annotation_df[col] = annotation_df[col].fillna("NaN")
                             except:
                                 print("Could not convert nans in column {}.".format(col))
                             annotation_df[col] = pd.Categorical(annotation_df[col])
-                            new_colnames.append('annot_{}'.format(col.replace(' ', '_').replace('-', '_')))
+                            new_colnames.append('annot_{}'.format(col.replace(' ', '_').replace('-', '_').replace('.', '_')))
                     annotation_df.columns = new_colnames
                     for name, vector in zip(colnames_to_add, cols_to_add):
                         annotation_df[name] = vector
