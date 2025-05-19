@@ -989,18 +989,21 @@ class SCData:
                     for ind, col in enumerate(annotation_df.columns):
                         if np.all(annotation_df[col].apply(is_numeric)):
                             annotation_df[col] = annotation_df[col].astype(float)
-                            new_colnames.append('annot_num_{}'.format(col.replace(' ', '_').replace('-', '_').replace('.', '_')))
+                            new_colnames.append(
+                                'annot_num_{}'.format(col.replace(' ', '_').replace('-', '_').replace('.', '_')))
                             if len(np.unique(annotation_df[col])) < 20:
                                 # In this case, add a colname to the annotation that treats these as categorical annotation
                                 cols_to_add.append(['c_{}'.format(orig_annot) for orig_annot in annotation_df[col]])
-                                colnames_to_add.append('annot_categorized_{}'.format(col.replace(' ', '_').replace('-', '_').replace('.', '_')))
+                                colnames_to_add.append('annot_categorized_{}'.format(
+                                    col.replace(' ', '_').replace('-', '_').replace('.', '_')))
                         else:
                             try:
                                 annotation_df[col] = annotation_df[col].fillna("NaN")
                             except:
                                 print("Could not convert nans in column {}.".format(col))
                             annotation_df[col] = pd.Categorical(annotation_df[col])
-                            new_colnames.append('annot_{}'.format(col.replace(' ', '_').replace('-', '_').replace('.', '_')))
+                            new_colnames.append(
+                                'annot_{}'.format(col.replace(' ', '_').replace('-', '_').replace('.', '_')))
                     annotation_df.columns = new_colnames
                     for name, vector in zip(colnames_to_add, cols_to_add):
                         annotation_df[name] = vector
@@ -1081,7 +1084,10 @@ class SCData:
         else:
             filenamesData = filenamesData.split(',')
             filenameMeans = filenamesData[0]
-            filenameStds = filenamesData[1]
+            if len(filenamesData) > 1:
+                filenameStds = filenamesData[1]
+            else:
+                filenameStds = None
 
         try:
             originalData.ltqs, originalData.ltqsVars, originalData.geneVariances, self.metadata.nCells, \
@@ -2257,7 +2263,7 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
             exit()
     else:
         meanspath = os.path.join(data_folder, meansfile)
-        stdspath = os.path.join(data_folder, stdsfile)
+        stdspath = os.path.join(data_folder, stdsfile) if (stdsfile is not None) else None
         if not os.path.exists(meanspath):
             mp_print("Did not find necessary input-file: {}".format(meanspath), ERROR=True)
             exit()
@@ -2286,7 +2292,7 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
         nTasks = 0
     start = time.time()
 
-    if os.path.exists(stdspath):
+    if (stdspath is not None) and os.path.exists(stdspath):
         # In this case, we read in standard deviations, and use them to estimate a signal-to-noise ratio for each gene.
         ltqStdsFound = True
         zscoreCutoffSq = zscoreCutoff ** 2 if zscoreCutoff > 0 else 0.0
@@ -2412,8 +2418,12 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
     else:
         # In this case, we do not read in standard deviations, all genes are kept.
         ltqStdsFound = False
-        mp_print("****\nNo standard-deviations found for features at {}. Assuming very small error-bar instead. "
-                 "\nCheck if this is the desired behaviour!!!\n****".format(stdspath), ERROR=True)
+        if stdspath is not None:
+            mp_print("****\nNo standard-deviations found for features at {}. Assuming very small error-bar instead. "
+                     "\nCheck if this is the desired behaviour!!!\n****".format(stdspath), ERROR=True)
+        else:
+            mp_print("****\nNo filename is given for standard-deviations. Check if this is the desired behavior.\n****",
+                     WARNING=True)
         with open(meanspath, 'r') as fmeans:
             for row_ind in range(myTasks[0]):
                 next(fmeans)
