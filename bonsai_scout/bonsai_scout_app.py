@@ -78,6 +78,7 @@ app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.HTML("""
 <script>
+  if (document.domain == "bonsai.unibas.ch") {
   var _paq = window._paq = window._paq || [];
   /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
   _paq.push(['trackPageView']);
@@ -89,6 +90,7 @@ app_ui = ui.page_sidebar(
     var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
     g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
   })();
+        }
 </script>
         """),
         # 1. An accordion giving different options for changing the layout of the tree (zooming, layout-types, ...)
