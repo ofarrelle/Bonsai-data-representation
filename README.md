@@ -6,7 +6,7 @@ The *Bonsai* tree-reconstruction was originally designed for the analysis of sin
 
 ### *Bonsai* for scRNA-seq data using *Sanity*
 When using *Bonsai* for scRNAseq-data, we highly recommend using *Sanity* for processing of the raw counts [Sanity's GitHub-page](https://github.com/jmbreda/Sanity), or to upload your data to our [single-cell pipeline](https://bonsai.unibas.ch). If running *Bonsai* after *Sanity*, *Bonsai* just requires the files in the output-directory created by *Sanity*, and can be run with the argument `--input_is_sanity_output True`. 
-**IMPORTANT: Make sure to run *Sanity* with the flags `-e 1 --max_v true`**. This makes sure that we get *Sanity*'s extended output, and that it contains the inferred gene expression values corresponding to the maximum posterior guess of the gene-variances. See the SI of the *Bonsai*-publication for an extensive discussion of why this is the preferred mode of running *Sanity* when getting *Bonsai* input.
+**IMPORTANT: Make sure to run *Sanity* with the flags `-e 1 -max_v true`**. This makes sure that we get *Sanity*'s extended output, and that it contains the inferred gene expression values corresponding to the maximum posterior guess of the gene-variances. See the SI of the *Bonsai*-publication for an extensive discussion of why this is the preferred mode of running *Sanity* when getting *Bonsai* input.
 
 Example Sanity-command:
 ```
