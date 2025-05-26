@@ -1442,7 +1442,7 @@ def nnnReorderRandom(args, outputFolder, verbose=False, randomMoves=0,
                 mp_print("Best random tree still has lower likelihood than the original tree. This is probably normal"
                          "and desired behavior, but maybe check if something didn't go terribly wrong.", WARNING=True)
                 take_original_tree = True
-            if verbose:
+            if verbose and (not take_original_tree):
                 mp_print("Taking tree number %d. The random moves increased the loglikelihood from %f to %f." % (
                     tasks[bestTreeInd], origLoglik, logliks[bestTreeInd]), ALL_RANKS=True)
             bestTree = tasks[bestTreeInd]
@@ -1454,7 +1454,7 @@ def nnnReorderRandom(args, outputFolder, verbose=False, randomMoves=0,
             if take_original_tree:
                 scData = loadReconstructedTreeAndData(args, os.path.join(random_folder, 'orig_tree'),
                                                       reprocess_data=False, all_genes=False, get_cell_info=False,
-                                                      all_ranks=True, rel_to_results=False)
+                                                      all_ranks=False, rel_to_results=False)
             else:
                 scData = loadReconstructedTreeAndData(args, os.path.join(random_folder, 'random_tree_%d' % bestTree),
                                                       reprocess_data=False, all_genes=False, get_cell_info=False,
