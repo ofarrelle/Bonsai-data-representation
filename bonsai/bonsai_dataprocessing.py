@@ -1437,9 +1437,11 @@ def nnnReorderRandom(args, outputFolder, verbose=False, randomMoves=0,
             tasks, logliks = zip(*treeLogliks.items())
             bestTreeInd = np.argmax(logliks)
             max_rand_loglik = logliks[bestTreeInd]
+            take_original_tree = False
             if max_rand_loglik < origLoglik:
                 mp_print("Best random tree still has lower likelihood than the original tree. This is probably normal"
                          "and desired behavior, but maybe check if something didn't go terribly wrong.", WARNING=True)
+                take_original_tree = True
             if verbose:
                 mp_print("Taking tree number %d. The random moves increased the loglikelihood from %f to %f." % (
                     tasks[bestTreeInd], origLoglik, logliks[bestTreeInd]), ALL_RANKS=True)
@@ -1449,9 +1451,14 @@ def nnnReorderRandom(args, outputFolder, verbose=False, randomMoves=0,
             # self.tree = unpickleTree(pickleFolder, 'randomTree_%d.dat' % bestTree)
             # mp_print("Before loading optimal random tree, memory usage is ",
             #          psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2, " MB.", ALL_RANKS=True)
-            scData = loadReconstructedTreeAndData(args, os.path.join(random_folder, 'random_tree_%d' % bestTree),
-                                                  reprocess_data=False, all_genes=False, get_cell_info=False,
-                                                  all_ranks=False, rel_to_results=False)
+            if take_original_tree:
+                scData = loadReconstructedTreeAndData(args, os.path.join(random_folder, 'orig_tree'),
+                                                      reprocess_data=False, all_genes=False, get_cell_info=False,
+                                                      all_ranks=True, rel_to_results=False)
+            else:
+                scData = loadReconstructedTreeAndData(args, os.path.join(random_folder, 'random_tree_%d' % bestTree),
+                                                      reprocess_data=False, all_genes=False, get_cell_info=False,
+                                                      all_ranks=False, rel_to_results=False)
             mp_print("Loaded optimal tree has loglikelihood: %r" % scData.metadata.loglik)
             # mp_print("Loaded optimal tree has true loglikelihood: %r" % scData.tree.calcLogLComplete(mem_friendly=True,
             #                                                                                  loglikVarCorr=scData.metadata.loglikVarCorr))
