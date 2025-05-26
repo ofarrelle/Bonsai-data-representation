@@ -2242,24 +2242,32 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
                  "we are assuming the input-files are Sanity output.\n"
                  "If this is not the desired behavior, change this argument in the Bonsai config-yaml file.")
         meanspath = os.path.join(data_folder, 'delta_vmax.txt')
+        input_incomplete = False
         if not os.path.exists(meanspath):
-            mp_print("File {} not found.".format(meanspath), WARNING=True)
+            exit("File {} not found.".format(meanspath), WARNING=True)
+            input_incomplete = True
         stdspath = os.path.join(data_folder, 'd_delta_vmax.txt')
         if not os.path.exists(stdspath):
             mp_print("File {} not found.".format(stdspath), WARNING=True)
+            input_incomplete = True
         gene_variancepath = os.path.join(data_folder, 'variance_vmax.txt')
         if not os.path.exists(gene_variancepath):
             mp_print("File {} not found.".format(gene_variancepath), WARNING=True)
+            input_incomplete = True
         gene_meanspath = os.path.join(data_folder, 'mu_vmax.txt')
         if not os.path.exists(gene_meanspath):
             mp_print("File {} not found.".format(gene_meanspath), WARNING=True)
+            input_incomplete = True
         # Check if correct version of Sanity was run
-        if not os.path.exists(meanspath):
+        if input_incomplete:
             if os.path.exists(os.path.join(data_folder, 'delta.txt')):
                 mp_print("Only found delta.txt, not delta_vmax.txt. "
                          "Make sure to run Sanity with the argument '-max_v only_max_output'", ERROR=True)
             else:
-                mp_print("Did not find necessary input-file: {}".format(meanspath), ERROR=True)
+                mp_print("Could not find (the right) Sanity-output.\n"
+                 "Are you sure the argument --input_is_sanity_output should be set to True?"
+                 "\nAre you sure you are running Sanity with the extended-output flag -e 1, "
+                         "and the vmax-argument: -vmax true?", ERROR=True)
             exit()
     else:
         meanspath = os.path.join(data_folder, meansfile)
