@@ -1152,6 +1152,15 @@ class SCData:
                 reader = csv.reader(file, delimiter="\t")
                 for row in reader:
                     self.metadata.cellIds.append(row[0])
+            n_unq_ids = len(np.unique(self.metadata.cellIds))
+            if self.metadata.nCells is not None:
+                if (n_unq_ids != self.metadata.nCells) or (len(self.metadata.cellIds) != self.metadata.nCells):
+                    mp_print("Number of unique object-IDs given in {} does not "
+                             "match the number of columns in your feature"
+                         "matrix.\n "
+                             "Please resolve this and start Bonsai again.".format(self.data_path('cellID.txt')),
+                             ERROR=True)
+                    exit()
         else:
             mp_print("No cellID-file was found. Giving generic names.")
             if self.metadata.nCells is None:
