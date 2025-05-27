@@ -432,7 +432,7 @@ if args.step in ['core_calc', 'all']:
         scData.tree.root.deleteParentsWithOneChild()
         scData.tree.root.mergeZeroTimeChilds()
         # scData.tree.root.reorderChildrenRoot(verbose=args.verbose, maxChild=8)
-        scData.tree.root.rearrange_branches_node(ladderize_all=True, nNodes=scData.tree.nNodes)
+        scData.tree.root.ladderize_in_main()
 
         mp_print("Reordering children took " + str(time.time() - startReorderEdges) + " seconds.")
         scData.metadata.loglik = scData.tree.calcLogLComplete(mem_friendly=True,
