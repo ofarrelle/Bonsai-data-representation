@@ -6,7 +6,16 @@ The *Bonsai* tree-reconstruction was originally designed for the analysis of sin
 
 ### *Bonsai* for scRNA-seq data using *Sanity*
 When using *Bonsai* for scRNAseq-data, we highly recommend using *Sanity* for processing of the raw counts [Sanity's GitHub-page](https://github.com/jmbreda/Sanity), or to upload your data to our [single-cell pipeline](https://bonsai.unibas.ch). If running *Bonsai* after *Sanity*, *Bonsai* just requires the files in the output-directory created by *Sanity*, and can be run with the argument `--input_is_sanity_output True`. 
-**IMPORTANT: Make sure to run *Sanity* with the flags `-e 1 --max_v true`**. This makes sure that we get *Sanity*'s extended output, and that it contains the inferred gene expression values corresponding to the maximum posterior guess of the gene-variances. See the SI of the *Bonsai*-publication for an extensive discussion of why this is the preferred mode of running *Sanity* when getting *Bonsai* input.
+**IMPORTANT: Make sure to run *Sanity* with the flags `-e 1 -max_v true`**. This makes sure that we get *Sanity*'s extended output, and that it contains the inferred gene expression values corresponding to the maximum posterior guess of the gene-variances. See the SI of the *Bonsai*-publication for an extensive discussion of why this is the preferred mode of running *Sanity* when getting *Bonsai* input.
+
+Example Sanity-command:
+```
+Sanity -n <number_of_threads> -f <path_to_gene_table.tsv> -d <path_to_output_folder> -e true --max_v true
+```
+or with an mtx-file:
+```
+Sanity -n <number_of_threads> -f <path_to_gene_table.mtx> -d <path_to_output_folder> -e true --max_v true -mtx_genes <path_to_gene_ids.tsv> -mtx_cells <path_to_cell_ids.tsv>
+```
 
 ### *Bonsai* on general datatypes
 If running *Bonsai* based on other data, read the Section on [Running *Bonsai* on other data-types](https://github.com/dhdegroot/Bonsai-data-representation#running-bonsai-on-other-data-types).
@@ -144,7 +153,7 @@ The results will be stored in the results-folder as indicated in the .yaml-file.
 * a copy of the configuration YAML-file with an added timestamp. In this way, one can always see with what running configurations the results were created, and when this run was started.
 
 ## Running Bonsai on other data-types
-As we describe in the *Bonsai*-paper, *Bonsai* can be used to reconstruct the maximum likelihood tree on any dataset with objects that have features in a high-dimensional feature space. However, it is necessary that the data is normalized first to align with the likelihood model that *Bonsai* uses. In short, *Bonsai* assumes that, for each object, the input specifies a vector of estimated features (`features.txt`) with error-bars (`standard_deviations.txt`). The input data should be normalized such that the likelihood of the `measured` features is reasonably approximated by a multi-variate Gaussian with means given by `features.txt` and standard-deviations given by `standard_deviations.txt`, and negligible covariances. As we extensively discuss int he paper for scRNA-seq data, this may require a careful definition of the variables to be inferred, which will depend on the data type. Apart from the specific application for scRNA-seq, it will be up to the user to provide appropriately normalized data to \emph{Bonsai}.
+As we describe in the *Bonsai*-paper, *Bonsai* can be used to reconstruct the maximum likelihood tree on any dataset with objects that have features in a high-dimensional feature space. However, it is necessary that the data is normalized first to align with the likelihood model that *Bonsai* uses. In short, *Bonsai* assumes that, for each object, the input specifies a vector of estimated features (`features.txt`) with error-bars (`standard_deviations.txt`). The input data should be normalized such that the likelihood of the `measured` features is reasonably approximated by a multi-variate Gaussian with means given by `features.txt` and standard-deviations given by `standard_deviations.txt`, and negligible covariances. As we extensively discuss int he paper for scRNA-seq data, this may require a careful definition of the variables to be inferred, which will depend on the data type. Apart from the specific application for scRNA-seq, it will be up to the user to provide appropriately normalized data to _Bonsai_.
 
 ### The required files
 To use *Bonsai* on a general dataset that contains $C$ objects in an $G$-dimensional feature space, we need to provide it with:
