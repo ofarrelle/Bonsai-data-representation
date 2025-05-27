@@ -11,7 +11,7 @@ import logging
 
 FORMAT = '%(asctime)s %(name)s %(funcName)s %(message)s'
 log_level = logging.DEBUG
-logging.basicConfig(format=FORMAT, datefmt='%H:%M:%S',
+logging.basicConfig(format=FORMAT, datefmt='%m-%d %H:%M:%S',
                     level=log_level)
 
 class Layout_Tree:
