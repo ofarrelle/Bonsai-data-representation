@@ -1152,6 +1152,15 @@ class SCData:
                 reader = csv.reader(file, delimiter="\t")
                 for row in reader:
                     self.metadata.cellIds.append(row[0])
+            n_unq_ids = len(np.unique(self.metadata.cellIds))
+            if self.metadata.nCells is not None:
+                if (n_unq_ids != self.metadata.nCells) or (len(self.metadata.cellIds) != self.metadata.nCells):
+                    mp_print("Number of unique object-IDs given in {} does not "
+                             "match the number of columns in your feature"
+                         "matrix.\n "
+                             "Please resolve this and start Bonsai again.".format(self.data_path('cellID.txt')),
+                             ERROR=True)
+                    exit()
         else:
             mp_print("No cellID-file was found. Giving generic names.")
             if self.metadata.nCells is None:
@@ -1437,10 +1446,12 @@ def nnnReorderRandom(args, outputFolder, verbose=False, randomMoves=0,
             tasks, logliks = zip(*treeLogliks.items())
             bestTreeInd = np.argmax(logliks)
             max_rand_loglik = logliks[bestTreeInd]
+            take_original_tree = False
             if max_rand_loglik < origLoglik:
                 mp_print("Best random tree still has lower likelihood than the original tree. This is probably normal"
                          "and desired behavior, but maybe check if something didn't go terribly wrong.", WARNING=True)
-            if verbose:
+                take_original_tree = True
+            if verbose and (not take_original_tree):
                 mp_print("Taking tree number %d. The random moves increased the loglikelihood from %f to %f." % (
                     tasks[bestTreeInd], origLoglik, logliks[bestTreeInd]), ALL_RANKS=True)
             bestTree = tasks[bestTreeInd]
@@ -1449,9 +1460,14 @@ def nnnReorderRandom(args, outputFolder, verbose=False, randomMoves=0,
             # self.tree = unpickleTree(pickleFolder, 'randomTree_%d.dat' % bestTree)
             # mp_print("Before loading optimal random tree, memory usage is ",
             #          psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2, " MB.", ALL_RANKS=True)
-            scData = loadReconstructedTreeAndData(args, os.path.join(random_folder, 'random_tree_%d' % bestTree),
-                                                  reprocess_data=False, all_genes=False, get_cell_info=False,
-                                                  all_ranks=False, rel_to_results=False)
+            if take_original_tree:
+                scData = loadReconstructedTreeAndData(args, os.path.join(random_folder, 'orig_tree'),
+                                                      reprocess_data=False, all_genes=False, get_cell_info=False,
+                                                      all_ranks=False, rel_to_results=False)
+            else:
+                scData = loadReconstructedTreeAndData(args, os.path.join(random_folder, 'random_tree_%d' % bestTree),
+                                                      reprocess_data=False, all_genes=False, get_cell_info=False,
+                                                      all_ranks=False, rel_to_results=False)
             mp_print("Loaded optimal tree has loglikelihood: %r" % scData.metadata.loglik)
             # mp_print("Loaded optimal tree has true loglikelihood: %r" % scData.tree.calcLogLComplete(mem_friendly=True,
             #                                                                                  loglikVarCorr=scData.metadata.loglikVarCorr))
@@ -2242,24 +2258,32 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
                  "we are assuming the input-files are Sanity output.\n"
                  "If this is not the desired behavior, change this argument in the Bonsai config-yaml file.")
         meanspath = os.path.join(data_folder, 'delta_vmax.txt')
+        input_incomplete = False
         if not os.path.exists(meanspath):
-            mp_print("File {} not found.".format(meanspath), WARNING=True)
+            exit("File {} not found.".format(meanspath), WARNING=True)
+            input_incomplete = True
         stdspath = os.path.join(data_folder, 'd_delta_vmax.txt')
         if not os.path.exists(stdspath):
             mp_print("File {} not found.".format(stdspath), WARNING=True)
+            input_incomplete = True
         gene_variancepath = os.path.join(data_folder, 'variance_vmax.txt')
         if not os.path.exists(gene_variancepath):
             mp_print("File {} not found.".format(gene_variancepath), WARNING=True)
+            input_incomplete = True
         gene_meanspath = os.path.join(data_folder, 'mu_vmax.txt')
         if not os.path.exists(gene_meanspath):
             mp_print("File {} not found.".format(gene_meanspath), WARNING=True)
+            input_incomplete = True
         # Check if correct version of Sanity was run
-        if not os.path.exists(meanspath):
+        if input_incomplete:
             if os.path.exists(os.path.join(data_folder, 'delta.txt')):
                 mp_print("Only found delta.txt, not delta_vmax.txt. "
                          "Make sure to run Sanity with the argument '-max_v only_max_output'", ERROR=True)
             else:
-                mp_print("Did not find necessary input-file: {}".format(meanspath), ERROR=True)
+                mp_print("Could not find (the right) Sanity-output.\n"
+                 "Are you sure the argument --input_is_sanity_output should be set to True?"
+                 "\nAre you sure you are running Sanity with the extended-output flag -e 1, "
+                         "and the vmax-argument: -vmax true?", ERROR=True)
             exit()
     else:
         meanspath = os.path.join(data_folder, meansfile)

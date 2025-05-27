@@ -13,11 +13,24 @@ import logging
 FORMAT = '%(asctime)s %(name)s %(funcName)s %(message)s'
 log_level = logging.WARNING
 log_level = logging.DEBUG
-logging.basicConfig(format=FORMAT, datefmt='%H:%M:%S',
+logging.basicConfig(format=FORMAT, datefmt='%m-%d %H:%M:%S',
                     level=log_level)
 
 
 def merge_clusters_acc_cellstates(clusters, umiCounts, cell_ids, verbose=True):
+    """
+    This function takes cellstates clusters and a umiCounts matrix, and the corresponding cell_ids.
+    It finds the unique cellstates clusters, and then selects the corresponding columns from the UMI-count
+    matrix, and adds them together in a new "summed" UMI-counts cluster.
+    It returns
+    summed_counts_clst: new UMI-matrix
+    counts: number of cells per cellstate
+    cs_annot: Annotation that can be used for the cellstates (indicating the cellstate name,
+    and cs<{small_cs_annot_cutoff} for smaller cellstates
+    cell_annot: Annotation that can be used for the cells (indicating the same as above, but now per cell)
+    cs_ids: The new ids of the cellstates
+    cell_id_to_cs_id: Mapping from each cell-ID to their cs-ID
+    """
     clsts, cell_ind_to_cs_ind, counts = np.unique(clusters, return_inverse=True, return_counts=True)
     n_clst = len(clsts)
 

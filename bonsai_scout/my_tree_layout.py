@@ -11,7 +11,7 @@ import logging
 
 FORMAT = '%(asctime)s %(name)s %(funcName)s %(message)s'
 log_level = logging.DEBUG
-logging.basicConfig(format=FORMAT, datefmt='%H:%M:%S',
+logging.basicConfig(format=FORMAT, datefmt='%m-%d %H:%M:%S',
                     level=log_level)
 
 class Layout_Tree:
@@ -495,6 +495,7 @@ class Layout_TreeNode:
             self.isRoot = True
         if len(new_children) == 0:
             self.isLeaf = True
+            self.childNodes = new_children
         else:
             self.isLeaf = False
             self.childNodes = new_children
