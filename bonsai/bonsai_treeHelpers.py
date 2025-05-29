@@ -25,6 +25,7 @@ class TreeNode:
     isLeaf = None
     isRoot = None
     isCell = None
+    dsLeafs = None
 
     # Position information
     ltqs = None  # (Effective) coordinates of the (node) leaf
@@ -300,6 +301,38 @@ class TreeNode:
         for childInd, child in enumerate(self.childNodes):
             child.reorderChildren(leftNeighbour=self.childNodes[(childInd - 1) % nChild], maxChild=maxChild,
                                   rightNeighbour=self.childNodes[(childInd + 1) % nChild])
+
+    def ladderize_in_main(self):
+        if self.dsLeafs is None:
+            self.get_ds_info_for_ladderize(verbose=False)
+
+        if self.isLeaf:
+            return
+
+        # First get ladderized order
+        ds_leafs_ch = np.zeros(len(self.childNodes), dtype=int)
+        for ind, child in enumerate(self.childNodes):
+            ds_leafs_ch[ind] = child.dsLeafs
+        sorted_ch_inds_ladder = np.argsort(ds_leafs_ch)
+
+        # Then arrange the children in that order
+        self.childNodes = [self.childNodes[ind] for ind in sorted_ch_inds_ladder]
+
+        # Move on to do children
+        for child in self.childNodes:
+            child.ladderize_in_main()
+
+    def get_ds_info_for_ladderize(self, verbose=False):
+        if verbose and (self.vert_ind % 100000 == 0) and (self.vert_ind != 0):
+            logging.debug("Getting downstream information at vertex number {c:d}.".format(c=self.vert_ind))
+        if self.isLeaf:
+            self.dsLeafs = 1
+        else:
+            self.dsLeafs = 0
+            for child in self.childNodes:
+                dsLeafsCh = child.get_ds_info_for_ladderize(verbose=verbose)
+                self.dsLeafs += dsLeafsCh
+        return self.dsLeafs
 
     def reset_root_node(self, parent_ind=None, old_tParent=None):
         # Get all connecting nodes
@@ -2978,6 +3011,8 @@ class Tree:
 
         # TODO: Clean this up
         if (not random) and ((len(dsNeighbours) + len(usNeighbours)) > 30):
+            return False, None, None, None, None, None, None
+        elif (len(dsNeighbours) + len(usNeighbours)) > 50:
             return False, None, None, None, None, None, None
         if mem_friendly:
             dsNode.getAIRootUpstream()
