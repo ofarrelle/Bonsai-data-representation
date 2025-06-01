@@ -176,7 +176,7 @@ class SCData:
         if rescale_by_var and (originalData.ltqs is not None) and (originalData.ltqsVars is not None):
             originalData.ltqsVars /= (originalData.geneVariances[:, None])
             originalData.ltqs /= np.sqrt(originalData.geneVariances[:, None])
-            self.metadata.loglikVarCorr = - self.metadata.nCells * np.sum(
+            self.metadata.loglikVarCorr = - (self.metadata.nCells-1) * np.sum(
                 np.log(originalData.geneVariances))  # - self.metadata.nCells * self.metadata.nGenes * np.log(2* np.pi)
         elif (originalData.ltqs is not None) and (originalData.ltqsVars is not None):
             nVars = self.metadata.nGenes if self.metadata.nGenes is not None else originalData.geneVariances.shape
@@ -184,7 +184,7 @@ class SCData:
             originalData.geneVariances = np.ones(nVars) * mean_var
             originalData.ltqsVars /= mean_var
             originalData.ltqs /= np.sqrt(mean_var)
-            self.metadata.loglikVarCorr = - self.metadata.nCells * nVars * np.log(mean_var)
+            self.metadata.loglikVarCorr = - (self.metadata.nCells - 1) * nVars * np.log(mean_var)
         else:
             nVars = self.metadata.nGenes if self.metadata.nGenes is not None else originalData.geneVariances.shape
             originalData.geneVariances = np.ones(nVars)
