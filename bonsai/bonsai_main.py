@@ -485,7 +485,7 @@ if args.step in ['metadata', 'all']:
         finalFolder = getOutputFolder(zscore_cutoff=args.zscore_cutoff, tmp_file=os.path.basename(args.tmp_folder),
                                       final=True)
         scData.storeTreeInFolder(scData.result_path(finalFolder), with_coords=True, verbose=args.verbose,
-                                 store_posterior_ltqs=True, ltqs_were_rescaled_by_var=args.rescale_by_var)
+                                 store_posterior_ltqs=True, ltqs_were_rescaled_by_var=True)
         mp_print("\n\nStored final tree in " + scData.result_path(finalFolder) + ".\n\n")
 
         metadata = getMetadata(args, scData, outputFolder, computationTime)
