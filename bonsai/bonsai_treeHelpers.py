@@ -3012,6 +3012,8 @@ class Tree:
         # TODO: Clean this up
         if (not random) and ((len(dsNeighbours) + len(usNeighbours)) > 30):
             return False, None, None, None, None, None, None
+        elif (len(dsNeighbours) + len(usNeighbours)) > 50:
+            return False, None, None, None, None, None, None
         if mem_friendly:
             dsNode.getAIRootUpstream()
         dsNeighboursLtqs = np.array([child.ltqs for child in dsNeighbours]).T
