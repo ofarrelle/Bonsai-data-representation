@@ -137,8 +137,11 @@ results/*
 examples/1_simple_example/results/*
 
 .idea/Bonsai-data-representation.iml
+.idea/Private-bonsai.iml
+.idea/.gitignore
 *.png
 *.svg
 *.npy
 useful_scripts_not_bonsai/simulating_datasets/analyzing_simulated_datasets/results/
 slurm_runs_pipeline/
+.idea/Private-bonsai.iml
