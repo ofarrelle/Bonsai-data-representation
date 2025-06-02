@@ -2260,7 +2260,8 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
         meanspath = os.path.join(data_folder, 'delta_vmax.txt')
         input_incomplete = False
         if not os.path.exists(meanspath):
-            exit("File {} not found.".format(meanspath), WARNING=True)
+            mp_print("File {} not found.".format(meanspath), WARNING=True)
+            exit()
             input_incomplete = True
         stdspath = os.path.join(data_folder, 'd_delta_vmax.txt')
         if not os.path.exists(stdspath):
