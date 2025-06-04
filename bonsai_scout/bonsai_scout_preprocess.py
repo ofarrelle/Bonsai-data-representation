@@ -292,9 +292,13 @@ for feature_path in feature_paths:
     elif feature_data.shape[1] == scData.metadata.nCells:
         cell_data = feature_data
     elif feature_data.shape[1] == scData.metadata.nCss:
-        cell_data = np.zeros((feature_data.shape[0], scData.metadata.nCells))
+        cs_inds_corr_to_cells = np.zeros(scData.metadata.nCells, dtype=int)
         for cell_ind, cs_ind in scData.metadata.cell_ind_to_cs_ind.items():
-            cell_data[:, cell_ind] = feature_data[:, cs_ind]
+            cs_inds_corr_to_cells[cell_ind] = cs_ind
+        cell_data = feature_data[:][:, cs_inds_corr_to_cells]
+        # cell_data = np.zeros((feature_data.shape[0], scData.metadata.nCells))
+        # for cell_ind, cs_ind in scData.metadata.cell_ind_to_cs_ind.items():
+        #     cell_data[:, cell_ind] = feature_data[:, cs_ind]
     else:
         logging.error(
             "Number of columns in feature matrix {} does not match either number of cells, number of cellstates "
