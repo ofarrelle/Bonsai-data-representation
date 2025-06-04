@@ -282,9 +282,13 @@ for feature_path in feature_paths:
     feature_hdf = bonvis_data_hdf[feature_path]
     feature_data = feature_hdf['means']
     if feature_data.shape[1] == scData.tree.nNodes:
-        cell_data = np.zeros((feature_data.shape[0], scData.metadata.nCells))
+        vert_inds_corr_to_cells = np.zeros(scData.metadata.nCells, dtype=int)
         for cell_ind, vert_ind in scData.cellIndToVertInd.items():
-            cell_data[:, cell_ind] = feature_data[:, vert_ind]
+            vert_inds_corr_to_cells[cell_ind] = vert_ind
+        cell_data = feature_data[:][:, vert_inds_corr_to_cells]
+        # cell_data = np.zeros((feature_data.shape[0], scData.metadata.nCells))
+        # for cell_ind, vert_ind in scData.cellIndToVertInd.items():
+        #     cell_data[:, cell_ind] = feature_data[:, vert_ind]
     elif feature_data.shape[1] == scData.metadata.nCells:
         cell_data = feature_data
     elif feature_data.shape[1] == scData.metadata.nCss:
