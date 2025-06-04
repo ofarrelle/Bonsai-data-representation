@@ -505,6 +505,7 @@ class Bonvis_figure:
     int_obj = None
     single_cell_obj = None
     single_cs_obj = None
+    single_vert_obj = None
     multi_cell_obj = None
     multi_cs_obj = None
     edge_obj = None
@@ -528,6 +529,7 @@ class Bonvis_figure:
                        'hyperbolic': {'coll': None, 'patches': None, 'ax_lims': None}}
         self.int_obj = {'coll': None, 'vert_inds': None}
         self.single_cell_obj = {'coll': None, 'obj_inds': None, 'vert_inds': None}
+        self.single_vert_obj = {'coll': None, 'obj_inds': None, 'vert_inds': None}
         self.multi_cell_obj = {'coll': None, 'obj_inds': None, 'vert_inds': None}
         self.single_cs_obj = {'coll': None, 'obj_inds': None, 'vert_inds': None}
         self.multi_cs_obj = {'coll': None, 'obj_inds': None, 'vert_inds': None}
@@ -621,6 +623,8 @@ class Bonvis_figure:
             annot_is_cell = 'cellstates'
         else:
             annot_is_cell = 'verts'
+            self.single_obj = self.single_vert_obj
+            self.multi_obj = None
 
         # Some settings
         node_style = self.bonvis_settings.node_style
@@ -642,6 +646,9 @@ class Bonvis_figure:
         elif annot_is_cell == 'cellstates':
             self.single_obj['obj_inds'] = self.bonvis_metadata.cs_info['single_cs_at_vert']
             self.single_obj['vert_inds'] = cs_to_vert[self.single_obj['obj_inds']]
+        elif annot_is_cell == 'verts':
+            self.single_obj['obj_inds'] = self.int_obj['vert_inds_complement']
+            self.single_obj['vert_inds'] = self.int_obj['vert_inds_complement']
 
         #Get some information on verts with multiple cells
         # if annot_is_cell:
@@ -669,26 +676,22 @@ class Bonvis_figure:
                                                  linewidths=node_style['lw_int'])
 
         # Then create collection for verts with single cell
-        if annot_info.annot_type == 'cells':
+        if annot_info.annot_type in ['cells', 'cellstates', 'verts']:
             radii = self.vert_to_size[self.single_obj['vert_inds']]
             offsets = node_coords[self.single_obj['vert_inds'], :]
             facecolors = cell_to_color[self.single_obj['obj_inds']]
-        elif annot_info.annot_type == 'cellstates':
-            radii = self.vert_to_size[self.single_obj['vert_inds']]
-            offsets = node_coords[self.single_obj['vert_inds'], :]
-            facecolors = cell_to_color[self.single_obj['obj_inds']]
-        elif annot_info.annot_type == 'verts':
-            radii = self.vert_to_size[self.int_obj['vert_inds_complement']]
-            offsets = node_coords[self.int_obj['vert_inds_complement']]
-            facecolors = cell_to_color[self.int_obj['vert_inds_complement']]
+        # elif annot_info.annot_type == 'verts':
+        #     radii = self.vert_to_size[self.int_obj['vert_inds_complement']]
+        #     offsets = node_coords[self.int_obj['vert_inds_complement']]
+        #     facecolors = cell_to_color[self.int_obj['vert_inds_complement']]
         self.single_obj['coll'] = EllipseCollection(radii, radii, 0, units='width', offsets=offsets,
                                                     facecolors=facecolors, edgecolors=node_style['edgecolor'],
                                                     linewidths=node_style['lw_cell'], zorder=5)
 
-        # if annot_is_cell != 'verts':
-        self.plot_multi_obj_verts(node_coords=node_coords, cell_to_color=cell_to_color,
-                                node_style=node_style, cell_to_celltype=cell_to_celltype,
-                                annot_type=annot_info.annot_type)
+        if annot_is_cell != 'verts':
+            self.plot_multi_obj_verts(node_coords=node_coords, cell_to_color=cell_to_color,
+                                    node_style=node_style, cell_to_celltype=cell_to_celltype,
+                                    annot_type=annot_info.annot_type)
 
     def plot_multi_obj_verts(self, node_coords=None, cell_to_color=None,
                              node_style=None, cell_to_celltype=None,
@@ -1218,7 +1221,8 @@ class Bonvis_figure:
         if self.is_present['nodes']:
             self.int_obj['coll'].remove()
             self.single_obj['coll'].remove()
-            self.multi_obj['coll'].remove()
+            if self.multi_obj is not None:
+                self.multi_obj['coll'].remove()
             self.is_present['nodes'] = False
         if self.is_present['edges']:
             self.edge_obj['coll'].remove()
@@ -1366,8 +1370,8 @@ class Bonvis_figure:
             self.int_obj['coll'].set_facecolors(cell_to_color[self.int_obj['vert_inds']])
             self.single_obj['coll'].set_facecolors(cell_to_color[self.single_obj['vert_inds']])
 
-        # if annot_is_cell != 'verts':
-        self.plot_multi_obj_verts(node_coords=node_coords, cell_to_color=cell_to_color,
+        if annot_is_cell != 'verts':
+            self.plot_multi_obj_verts(node_coords=node_coords, cell_to_color=cell_to_color,
                                 node_style=node_style, cell_to_celltype=cell_to_celltype, annot_type=annot_info.annot_type)
 
     def update_fig_coords(self):
@@ -1382,13 +1386,14 @@ class Bonvis_figure:
         self.int_obj['coll'].set_offsets(node_coords[self.int_obj['vert_inds'], :])
         self.single_obj['coll'].set_offsets(node_coords[self.single_obj['vert_inds'], :])
 
-        wedges = []
-        for ind, wedge in enumerate(self.multi_obj['wedges']):
-            wedge.set_center(node_coords[self.multi_obj['vert_inds_per_wedge'][ind], :])
-            wedges.append(wedge)
-        self.multi_obj['wedges'] = wedges
-        self.multi_obj['coll'] = PatchCollection(self.multi_obj['wedges'],
-                                                 **self.multi_obj['kwargs'])
+        if self.multi_obj is not None:
+            wedges = []
+            for ind, wedge in enumerate(self.multi_obj['wedges']):
+                wedge.set_center(node_coords[self.multi_obj['vert_inds_per_wedge'][ind], :])
+                wedges.append(wedge)
+            self.multi_obj['wedges'] = wedges
+            self.multi_obj['coll'] = PatchCollection(self.multi_obj['wedges'],
+                                                    **self.multi_obj['kwargs'])
 
     def create_figure(self, figsize=(12, 12), make_background=True, no_edges=False,
                       verbose=False, fig=None, ax=None):
@@ -1434,10 +1439,12 @@ class Bonvis_figure:
 
         self.int_obj['coll'].set_offset_transform(self.ax.transData)
         self.single_obj['coll'].set_offset_transform(self.ax.transData)
-        self.multi_obj['coll'].set_transform(self.ax.transData)
+        if self.multi_obj is not None:
+            self.multi_obj['coll'].set_transform(self.ax.transData)
         self.ax.add_collection(self.int_obj['coll'])
         self.ax.add_collection(self.single_obj['coll'])
-        self.ax.add_collection(self.multi_obj['coll'])
+        if self.multi_obj is not None:
+            self.ax.add_collection(self.multi_obj['coll'])
         self.is_present['nodes'] = True
         return self.fig
 
