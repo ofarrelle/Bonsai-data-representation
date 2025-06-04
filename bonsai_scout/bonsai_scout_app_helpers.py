@@ -159,8 +159,13 @@ class BonvisObject:
         for annot, annot_info in self.annot_infos.items():
             if hasattr(annot_info, 'hidden') and annot_info.hidden:
                 continue
-            if annot_info.color_type == 'sequential':
-                self.size_annotation_dict[annot_info.label] = annot_info.label
+            if annot_info.color_type != 'sequential':
+                continue
+            if annot_info.annot_type == 'cells' and (len(self.bonvis_metadata.cell_info['multi_at_vert']) > 0):
+                continue
+            if annot_info.annot_type == 'cellstates' and (len(self.bonvis_metadata.cs_info['multi_cs_at_vert']) > 0):
+                continue
+            self.size_annotation_dict[annot_info.label] = annot_info.label
 
         self.ly_types_dictionary = {'ly_eq_angle': 'Equal angle', 'ly_eq_daylight': 'Equal daylight', 'ly_dendrogram': 'Dendrogram',
                                     'ly_dendrogram_ladderized': 'Dendrogram (ladderized)'}
