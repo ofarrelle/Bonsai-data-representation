@@ -364,8 +364,24 @@ class Bonvis_settings:
                                            gradient_type=self.node_style['gradient_type'])  # , colortype='tab20')
         self.verttype_info = Verttype_info(vert_info_dict=bonvis_metadata.vert_info,
                                            gradient_type=self.node_style['gradient_type'])
+        # if len(self.celltype_info.annot_alts) > 1:
+        #     possible_init_annots = [annot for annot in self.celltype_info.annot_alts if annot != 'annot_default']
+        possible_init_annots = []
         if len(self.celltype_info.annot_alts) > 1:
             possible_init_annots = [annot for annot in self.celltype_info.annot_alts if annot != 'annot_default']
+            annot_tuples = []
+            for annot_alt in self.celltype_info.annot_alts:
+                if annot_alt == 'annot_default':
+                    continue
+                if annot_alt[:15] == 'annot_cluster_n':
+                    continue
+                annot_info_alt = self.celltype_info.annot_infos[annot_alt]
+                if annot_info_alt.cats is None:
+                    continue
+                annot_tuples.append((annot_alt, len(annot_info_alt.cats)))
+            if len(annot_tuples) > 0:
+                sorted_annots = sorted(annot_tuples, key=lambda x: (not x[0].lower().startswith("annot_celltype"), x[1]))
+                possible_init_annots = [sorted_annots[0][0]]
         init_annot = possible_init_annots[0] if len(possible_init_annots) else self.celltype_info.annot_alts[0]
         self.set_annot(annot_label=init_annot)
         self.set_size_style(annot_label='cell_number')
@@ -451,7 +467,7 @@ class Bonvis_settings:
                                                                                        self.celltype_info.annot_alts[
                                                                                            0]))
             annot = self.celltype_info.annot_alts[0]
-            self.celltype_info.annot = annot
+            # self.celltype_info.annot = annot
             self.node_style['annot_info'] = self.celltype_info.annot_infos[annot]
 
     def set_size_style(self, annot_info=None, annot_label=None):
