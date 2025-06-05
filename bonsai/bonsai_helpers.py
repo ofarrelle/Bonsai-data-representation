@@ -164,25 +164,25 @@ def mp_print(*args, **kwargs):
 
 # Should go to tree vis file
 def get_celltype_colors(n_celltypes, colortype=None, gradientType='hsv'):
-    # if (colortype is None) and (n_celltypes <= 9):
-    #     col_HSC = "#0B5345"  # darkgreen
-    #     col_MPP = "#229954"  # green
-    #     col_LMPP = "#48C9B0"  # turchqoise
-    #     col_CMP = "#AF601A"
-    #     col_UNK = "#E5E7E9"
-    #     col_MEP = "#FE776D"
-    #     col_pDC = "#A690A4"
-    #     col_GMP = "#FCD0A1"
-    #     col_CLP = "#AFD2E9"
-    #     col_5h1 = "#FF7F11"  # orange
-    #     col_5h2 = "#FF1B1C"  # red
-    #     col_10h1 = "#10AFF8"  # light blue
-    #     col_10h2 = "#0E2DF5"  # darker blue
-    #
-    #     celltype_colors = [col_CLP, col_CMP, col_GMP, col_HSC, col_LMPP, col_MEP, col_MPP, col_UNK, col_pDC]
-    #     celltype_colors = ListedColormap(celltype_colors)
-    #     if n_celltypes == 4:
-    #         celltype_colors = ListedColormap([col_10h1, col_10h2, col_5h1, col_5h2])
+    if (colortype is None) and (n_celltypes <= 8):
+        col_HSC = "#0B5345"  # darkgreen
+        col_MPP = "#229954"  # green
+        col_LMPP = "#48C9B0"  # turchqoise
+        col_CMP = "#AF601A"
+        # col_UNK = "#E5E7E9"
+        col_MEP = "#FE776D"
+        col_pDC = "#A690A4"
+        col_GMP = "#FCD0A1"
+        col_CLP = "#AFD2E9"
+        col_5h1 = "#FF7F11"  # orange
+        col_5h2 = "#FF1B1C"  # red
+        col_10h1 = "#10AFF8"  # light blue
+        col_10h2 = "#0E2DF5"  # darker blue
+
+        celltype_colors = [col_CLP, col_CMP, col_GMP, col_HSC, col_LMPP, col_MEP, col_MPP, col_pDC]
+        celltype_colors = ListedColormap(celltype_colors)
+        if n_celltypes == 4:
+            celltype_colors = ListedColormap([col_10h1, col_10h2, col_5h1, col_5h2])
         # col_dict = {"MEP": col_MEP,
         #             "pDC": col_pDC,
         #             "GMP": col_GMP,
@@ -196,7 +196,7 @@ def get_celltype_colors(n_celltypes, colortype=None, gradientType='hsv'):
         #             "GMP-B": col_GMPB,
         #             "GMP-C": col_GMPC
         #             }
-    if (colortype is None) and (n_celltypes < 10):
+    elif (colortype is None) and (n_celltypes < 10):
         celltype_colors = cm.get_cmap('tab10')
     elif (colortype is None) and (n_celltypes < 20):
         celltype_colors = cm.get_cmap('tab20')

@@ -2797,12 +2797,12 @@ class Tree:
         if mpi_wrapper.is_first_process() or singleProcess:
             nodeInds, times = zip(*self.root.getTs({}).items())
             t0 = np.minimum(np.maximum(np.array(times), 1e-4), 1e4)
-            bounds = ((-13.815510557964274, 13.815510557964274),) * len(t0)  # np.log(1e-6) = -13.815510557964274
+            bounds = ((-15, 15),) * len(t0)  # np.log(1e-6) = -13.815510557964274
             optRes = minimize(self.getNegLikelihoodGradGivenLogTimesWrapper, np.log(t0),
                               args=(nodeInds, verbose, mem_friendly,), tol=tol,
                               options={'disp': False, 'maxiter': maxiter}, jac=True, bounds=bounds)
             optTimes = np.exp(optRes.x)
-            optTimes[optTimes < (1e-6 + 1e-8)] = 0.
+            optTimes[optTimes < (1e-6 + 1e-6)] = 0.
         else:
             optTimes = None
             nodeInds = None
@@ -2814,6 +2814,74 @@ class Tree:
         self.root.assignTs(optTimes)
         self.root.getLtqsComplete(mem_friendly=True)
         return optTimes
+
+    # Used
+    def test_for_zero_times(self, verbose=False, singleProcess=False, mem_friendly=True, maxiter=1e6, tol=1e-6):
+        """
+
+        :param verbose:
+        :param singleProcess: This boolean variable determines whether many processes work together to calculate such
+        that mergeChildrenUB can again be parallelized, or whether different processes are doing different instances
+        of this function.
+        :return:
+        """
+        if mpi_wrapper.is_first_process() or singleProcess:
+            nodeInds, times = zip(*self.root.getTs({}).items())
+            times = np.array(times)
+            cutoffs = [None, 1e-6, 1e-5, 1e-4, 1e-3]
+            maxLogL = - np.inf
+            maxLogLInd = 0
+            for ind, cutoff in enumerate(cutoffs):
+                if cutoff is None:
+                    t0 = times.copy()
+                else:
+                    t0 = times.copy()
+                    t0[t0 < cutoff] = 0.
+                t = dict(zip(nodeInds, t0))
+                self.root.assignTs(t)
+                # First calculate the positions (ltqs, W_g) for all nodes in the tree. This also gives us the loglik
+                self.root.getLtqsComplete(mem_friendly=mem_friendly)
+                loglik = self.root.prefactor
+                if loglik > maxLogL:
+                    maxLogL = loglik
+                    maxLogLInd = ind
+
+            # Finally, pick the cutoff for which we got the best likelihood
+            cutoff = cutoffs[maxLogLInd]
+            if maxLogLInd != 0:
+                mp_print("Setting all branch lengths smaller than {} to zero. "
+                         "This increases the tree likelihood slightly.".format(cutoff))
+            optTimes = times
+            optTimes[optTimes < cutoff] = 0.
+        else:
+            optTimes = None
+            nodeInds = None
+        if not singleProcess:
+            nodeInds = mpi_wrapper.bcast(nodeInds, root=0)
+            optTimes = mpi_wrapper.bcast(optTimes, root=0)
+        optTimes = dict(zip(nodeInds, optTimes))
+        self.root.assignTs(optTimes)
+        self.root.getLtqsComplete(mem_friendly=True)
+        return optTimes
+
+        #     t0 = np.minimum(np.maximum(np.array(times), 1e-4), 1e4)
+        #     bounds = ((-15, 15),) * len(t0)  # np.log(1e-6) = -13.815510557964274
+        #     optRes = minimize(self.getNegLikelihoodGradGivenLogTimesWrapper, np.log(t0),
+        #                       args=(nodeInds, verbose, mem_friendly,), tol=tol,
+        #                       options={'disp': False, 'maxiter': maxiter}, jac=True, bounds=bounds)
+        #     optTimes = np.exp(optRes.x)
+        #     optTimes[optTimes < (1e-6 + 1e-6)] = 0.
+        # else:
+        #     optTimes = None
+        #     nodeInds = None
+        # if not singleProcess:
+        #     nodeInds = mpi_wrapper.bcast(nodeInds, root=0)
+        #     optTimes = mpi_wrapper.bcast(optTimes, root=0)
+        #
+        # optTimes = dict(zip(nodeInds, optTimes))
+        # self.root.assignTs(optTimes)
+        # self.root.getLtqsComplete(mem_friendly=True)
+        # return optTimes
 
     # Used
     def optTimes_single_scalar(self, verbose=False, singleProcess=False, mem_friendly=True, maxiter=1e6, tol=1e-6):

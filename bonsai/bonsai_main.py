@@ -381,6 +381,7 @@ if args.step in ['core_calc', 'all']:
         startOptTimes = time.time()
         mp_print("Starting a final optimization of diffusion times.")
         optTimes = scData.tree.optTimes(verbose=True, mem_friendly=True, maxiter=100, singleProcess=True)
+        new_opt_times = scData.tree.test_for_zero_times(verbose=True, mem_friendly=True, singleProcess=True)
         mp_print("Optimization of diffusion times took " + str(time.time() - startOptTimes) + " seconds.")
         scData.metadata.loglik = scData.tree.calcLogLComplete(mem_friendly=True,
                                                               loglikVarCorr=scData.metadata.loglikVarCorr)
