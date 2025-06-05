@@ -2345,18 +2345,18 @@ def get_centroid_poincare(coords, transf_info, zoom=1, verbose=False):
 
 # Style helper functions
 def get_celltype_colors_new(n_celltypes=None, colortype=None, gradientType='YlOrRd'):
-    if (colortype is None) and (n_celltypes <= 9):
+    if (colortype is None) and (n_celltypes <= 8):
         col_HSC = "#0B5345"  # darkgreen
         col_MPP = "#229954"  # green
         col_LMPP = "#48C9B0"  # turchqoise
         col_CMP = "#AF601A"
-        col_UNK = "#E5E7E9"
+        # col_UNK = "#E5E7E9"
         col_MEP = "#FE776D"
         col_pDC = "#A690A4"
         col_GMP = "#FCD0A1"
         col_CLP = "#AFD2E9"
 
-        celltype_colors = [col_CLP, col_CMP, col_GMP, col_HSC, col_LMPP, col_MEP, col_MPP, col_UNK, col_pDC]
+        celltype_colors = [col_CLP, col_CMP, col_GMP, col_HSC, col_LMPP, col_MEP, col_MPP, col_pDC]
         celltype_colors = colors.ListedColormap(celltype_colors)
     elif ((colortype is None) or (colortype == 'tab10')) and (n_celltypes <= 10):
         celltype_colors = cm.get_cmap('tab10')

@@ -164,12 +164,12 @@ def mp_print(*args, **kwargs):
 
 # Should go to tree vis file
 def get_celltype_colors(n_celltypes, colortype=None, gradientType='hsv'):
-    if (colortype is None) and (n_celltypes <= 9):
+    if (colortype is None) and (n_celltypes <= 8):
         col_HSC = "#0B5345"  # darkgreen
         col_MPP = "#229954"  # green
         col_LMPP = "#48C9B0"  # turchqoise
         col_CMP = "#AF601A"
-        col_UNK = "#E5E7E9"
+        # col_UNK = "#E5E7E9"
         col_MEP = "#FE776D"
         col_pDC = "#A690A4"
         col_GMP = "#FCD0A1"
@@ -179,7 +179,7 @@ def get_celltype_colors(n_celltypes, colortype=None, gradientType='hsv'):
         col_10h1 = "#10AFF8"  # light blue
         col_10h2 = "#0E2DF5"  # darker blue
 
-        celltype_colors = [col_CLP, col_CMP, col_GMP, col_HSC, col_LMPP, col_MEP, col_MPP, col_UNK, col_pDC]
+        celltype_colors = [col_CLP, col_CMP, col_GMP, col_HSC, col_LMPP, col_MEP, col_MPP, col_pDC]
         celltype_colors = ListedColormap(celltype_colors)
         if n_celltypes == 4:
             celltype_colors = ListedColormap([col_10h1, col_10h2, col_5h1, col_5h2])
