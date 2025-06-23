@@ -163,7 +163,7 @@ if args.step in ['preprocess', 'all']:
     # Store run configurations in YAML-file in output-folder
     args.store_yaml(scData.result_path('used_run_configs.yaml'))
 
-    if args.step in ['preprocess'] and (mpiRank == 0):
+    if mpiRank == 0:
         # Store tree topology with optimised times, and the data only for selected genes, such that it can be read in
         # by multiple cores such that the next part of the program can be run in parallel
         # storeCurrentState(outputFolder, scData, filename='tmp_tree.dat', args=args)
@@ -214,7 +214,7 @@ if args.step in ['core_calc', 'all']:
                     # scData.tree = unpickleTree(tmp_folder, intermediateFile)
                     scData = loadReconstructedTreeAndData(args, os.path.join(tmp_folder, intermediateFolder),
                                                           reprocess_data=False, all_genes=False, get_cell_info=False,
-                                                          all_ranks=False, rel_to_results=False)
+                                                          all_ranks=False, rel_to_results=False, calc_loglik=True)
         Path(tmp_folder).mkdir(parents=True, exist_ok=True)
         nChildNN = -1 if args.use_knn < 0 else 50
         scData.tree.root.mergeChildrenUB(scData.tree.root.ltqs, scData.tree.root.getW(), scData=scData,

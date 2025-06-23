@@ -435,7 +435,7 @@ for ind, node_id in enumerate(node_ids):
     vert_ind_to_node_id[ind] = node_id
     if vert_n_cells[ind] > 0:
         node_ids_with_cells.append(node_id)
-node_id_to_n_cells = {node_id: vert_n_cells[ind] for ind, node_id in enumerate(node_ids)}
+# node_id_to_n_cells = {node_id: vert_n_cells[ind] for ind, node_id in enumerate(node_ids)}
 all_clusterings, cut_edges = get_min_pdists_clustering_from_nwk_str_new(tree_nwk_str=nwk_str, n_clusters=100,
                                                                         cell_ids=node_ids_with_cells,
                                                                         node_id_to_n_cells=node_id_to_n_cells,

@@ -947,7 +947,7 @@ class SCData:
                 delim = ','
             else:
                 continue
-            annot_input = pd.read_csv(filepath, header=0, index_col=0, delimiter=delim)  # .astype(dtype=str)
+            annot_input = pd.read_csv(filepath, header=0, index_col=0, delimiter=delim, dtype={0: str})  # .astype(dtype=str)
             if hasattr(self.metadata, 'nCss') and (
                     annot_input.shape[0] in [self.metadata.nCss - 1, self.metadata.nCss]):
                 if annot_input.shape[0] == (self.metadata.nCss - 1):
@@ -966,7 +966,7 @@ class SCData:
                     annotation_df = None
             elif annot_input.shape[0] in [self.metadata.nCells - 1, self.metadata.nCells]:
                 if annot_input.shape[0] == (self.metadata.nCells - 1):
-                    annot_input = pd.read_csv(filepath, header=None, index_col=0, delimiter=delim)
+                    annot_input = pd.read_csv(filepath, header=None, index_col=0, delimiter=delim, dtype={0: str})
                     annot_input.columns = ['Annotation {}_{}'.format(ind_file, ind) for ind in
                                            range(annot_input.shape[1])]
                 cell_id_to_ind = {cell_id: ind for ind, cell_id in enumerate(annot_input.index)}
