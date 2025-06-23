@@ -432,6 +432,7 @@ if args.step in ['core_calc', 'all']:
         nChildren = scData.tree.root.gatherInfoDepthFirst([])
         scData.tree.root.deleteParentsWithOneChild()
         scData.tree.root.mergeZeroTimeChilds()
+        scData.tree.root.renumberNodes()
         # scData.tree.root.reorderChildrenRoot(verbose=args.verbose, maxChild=8)
         scData.tree.root.ladderize_in_main()
 
