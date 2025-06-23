@@ -2852,7 +2852,8 @@ class Tree:
                 mp_print("Setting all branch lengths smaller than {} to zero. "
                          "This increases the tree likelihood slightly.".format(cutoff))
             optTimes = times
-            optTimes[optTimes < cutoff] = 0.
+            if cutoff is not None:
+                optTimes[optTimes < cutoff] = 0.
         else:
             optTimes = None
             nodeInds = None
