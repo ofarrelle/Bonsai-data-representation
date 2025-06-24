@@ -58,7 +58,7 @@ rescale_by_var: true
 
 # nnn_n_randommoves [int, default=1000]:
 # Decides how many random nearest-neighbor-interchange-moves we do before doing them greedily.
-nnn_n_randommoves: 10
+nnn_n_randommoves: 1000
 
 # nnn_n_randomtrees [int, default=10]:
 # Decides how many random trees we create before taking the tree with the highest loglikelihood and doing nnn greedily.
