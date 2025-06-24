@@ -261,6 +261,7 @@ if args.step in ['core_calc', 'all']:
         startRedoingStarry = time.time()
         scData.tree.root.mergeZeroTimeChilds()
         scData.tree.root.renumberNodes()  # Since some nodes were merged, we need to renumber the nodes consistently
+        scData.tree.nNodes = bs_glob.nNodes
 
         # Then start merging
         if mpiRank == 0:
@@ -432,7 +433,8 @@ if args.step in ['core_calc', 'all']:
         nChildren = scData.tree.root.gatherInfoDepthFirst([])
         scData.tree.root.deleteParentsWithOneChild()
         scData.tree.root.mergeZeroTimeChilds()
-        # scData.tree.root.renumberNodes()
+        scData.tree.root.renumberNodes()
+        scData.tree.nNodes = bs_glob.nNodes
         # scData.tree.root.reorderChildrenRoot(verbose=args.verbose, maxChild=8)
         scData.tree.root.ladderize_in_main()
 
