@@ -168,7 +168,8 @@ if args.step in ['preprocess', 'all']:
         # by multiple cores such that the next part of the program can be run in parallel
         # storeCurrentState(outputFolder, scData, filename='tmp_tree.dat', args=args)
         mp_print("Storing result of preprocessing in " + scData.result_path(outputFolder) + "\n\n")
-        scData.storeTreeInFolder(scData.result_path(outputFolder), with_coords=True, verbose=args.verbose)
+        scData.storeTreeInFolder(scData.result_path(outputFolder), with_coords=True, verbose=args.verbose,
+                                 cleanup_tree=False)
         exit()
 
 if args.step in ['core_calc', 'all']:
