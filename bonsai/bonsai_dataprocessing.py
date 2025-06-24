@@ -1319,7 +1319,7 @@ def nnnReorderRandom(args, outputFolder, verbose=False, randomMoves=0,
         if args.pickup_intermediate and os.path.exists(tmp_folder):
             intermediateFolders = os.listdir(tmp_folder)
             if len(intermediateFolders):
-                intermediateFolder, tmpTreeInd = get_latest_intermediate(intermediateFolders, base='nnn')
+                intermediateFolder, stored_tree_ind = get_latest_intermediate(intermediateFolders, base='nnn')
                 if intermediateFolder is not None:
                     # scData.tree = unpickleTree(tmp_folder, intermediateFile)
                     scData = loadReconstructedTreeAndData(args, os.path.join(tmp_folder, intermediateFolder),
@@ -1633,7 +1633,7 @@ def nnnReorder(args, tmp_folder, stored_tree_ind, maxMoves=100, closenessBound=0
         #                                              'tree_{}.nwk'.format(bs_glob.nwk_counter)))
         #     bs_glob.nwk_counter += 1
 
-        if moveCounter % 1000 == 0:
+        if moveCounter % 100 == 0:
             if mpiInfo.rank == 0:
                 scData.storeTreeInFolder(os.path.join(tmp_folder, 'nnn_tree_%d' % stored_tree_ind),
                                          with_coords=False, verbose=verbose, cleanup_tree=False)
