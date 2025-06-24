@@ -64,6 +64,7 @@ class Run_Configs:
                          'skip_redo_starry': False,
                          'skip_opt_times': False,
                          'skip_nnn_reordering': False,
+                         'skip_reorder_edges': False,
                          'pickup_intermediate': False,
                          'tmp_folder': None}
 
@@ -85,6 +86,20 @@ class Run_Configs:
                 setattr(self, label, self.config_yaml[label])
             else:
                 setattr(self, label, pars_defaults[label])
+
+        # The following run-configurations are still used in Bonsai, but can no longer be set by users. Instead,
+        # picking up intermediate results is only done through --pickup_intermediate and providing the correct
+        # intermediate-results folders in the results-folder
+        deprecated_args = ['skip_greedy_merging', 'skip_opt_times', 'skip_redo_starry', 'skip_nnn_reordering',
+                           'skip_reorder_edges']
+        for dep_arg in deprecated_args:
+            if hasattr(self, dep_arg) and getattr(self, dep_arg):
+                setattr(self, dep_arg, False)
+                mp_print(
+                    "The argument '{}' is deprecated and no longer have any effect. "
+                    "Use --pickup_intermediate True to pick up intermediate results from "
+                    "previous Bonsai runs.".format(dep_arg),
+                    WARNING=True)
 
         if step is not None:
             self.step = step
