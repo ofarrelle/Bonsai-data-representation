@@ -2094,9 +2094,11 @@ def load_data_for_tree(scData, tree_folder, vertind_to_node, get_all_data=True, 
                 if data_found:
                     scData.metadata.loglik = scData.tree.calcLogLComplete(mem_friendly=True,
                                                                           loglikVarCorr=scData.metadata.loglikVarCorr)
-        except:
+        except Exception as e:
+            mp_print("Encountered exception '{}'".format(e), WARNING=True)
             if no_data_needed:
-                print("Original data was not found, but is not strictly needed now. Will continue without it.")
+                mp_print("Original data was not found, but is not strictly needed now. Will continue without it.",
+                         WARNING=True)
                 data_found = False
         if verbose:
             if scData.metadata.loglik is not None:
