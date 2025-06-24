@@ -349,7 +349,7 @@ class SCData:
         mpiRank = mpi_wrapper.get_process_rank()
         if cleanup_tree:
             self.tree.root.mergeZeroTimeChilds()
-            self.tree.root.renumberNodes()
+            # self.tree.root.renumberNodes()
         if (mpiRank == 0) or all_ranks:
             Path(treeFolder).mkdir(parents=True, exist_ok=True)
             edgeList, distList, vertInfo = self.tree.getEdgeVertInfo(coords_folder=coords_folder, verbose=False,
