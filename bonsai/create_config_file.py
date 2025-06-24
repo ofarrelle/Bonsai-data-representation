@@ -107,10 +107,19 @@ parser.add_argument("--rescale_by_var", type=str2bool, default=True,
 # folder. Therefore, if Bonsai fails (or runs out of time) in some step, it can be picked up from the end-result of the
 # previous step. In that case, set skip_<step> of all previous steps to true.
 
+# For less fine-grained control, one can also just use --pickup_intermediate True, which overrules the other arguments.
+# In that case, we will look for the furthest advanced result in the results-folder. Note that the results-folder thus
+# has to be cleaned of older results that you don't want to be picked up.
+
 #  - greedy_merging: greedily merging pairs starting from the star-tree
 #  - redo_starry: detecting nodes that still have more than 2 children, and checking if more merges can be done
 #  - opt_times: optimizing all branch length simultaneously once
 #  - nnn_reordering: taking any edge and interchanging children of the two connected nodes
+
+parser.add_argument('--pickup_intermediate', type=str2bool, default=False,
+                    help='Decides whether we look for intermediate results from previous runs or not. '
+                         'These intermediate results are periodically stored during any normal run, and can thus be '
+                         'used when a run did not finalize.')
 
 # Arguments that decide how much post-optimisation is done
 parser.add_argument('--skip_greedy_merging', type=str2bool, default=False,
@@ -123,11 +132,6 @@ parser.add_argument("--skip_redo_starry", type=str2bool, default=False,
 parser.add_argument("--skip_nnn_reordering", type=str2bool, default=False,
                     help="Decides whether we go over edges and try to reconfigure all connected nodes (which are thus"
                          "next-nearest-neighbours).")
-
-parser.add_argument('--pickup_intermediate', type=str2bool, default=False,
-                    help='Decides whether we look for intermediate results from previous runs or not. '
-                         'These intermediate results are periodically stored during any normal run, and can thus be '
-                         'used when a run did not finalize.')
 
 parser.add_argument('--tmp_folder', type=str, default='',
                     help='(ADVANCED): Path (absolute path or relative to "bonsai-development") pointing to a '

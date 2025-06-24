@@ -31,6 +31,7 @@ other_colors = cm.get_cmap('tab20')
 gradient_colors = cm.get_cmap('viridis')
 
 import logging
+
 # FORMAT = '%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s'
 FORMAT = '%(asctime)s %(levelname)s %(message)s'
 log_level = logging.WARNING
@@ -498,7 +499,7 @@ def startMPI(verbose=True):
     mpi_wrapper.mpi_init()
     mpiSize = mpi_wrapper.get_process_size()
     mpiRank = mpi_wrapper.get_process_rank()
-    if verbose and (mpiRank in [mpiSize-1, 0]):
+    if verbose and (mpiRank in [mpiSize - 1, 0]):
         mp_print("Process " + str(mpiRank) + " out of " + str(mpiSize) + " has started.", ALL_RANKS=True)
     return mpiRank, mpiSize
 
@@ -577,6 +578,7 @@ def getOutputFolder(zscore_cutoff=-1, greedy=True, redo_starry=True, opt_times=T
         return all_possibilities
     return mergerFolder
 
+
 def find_latest_tree_folder(results_folder, not_final=False):
     tree_folder = None
     for file in os.listdir(results_folder):
@@ -591,6 +593,75 @@ def find_latest_tree_folder(results_folder, not_final=False):
     if tree_folder is None:
         tree_folder = results_folder
     return tree_folder
+
+
+def find_latest_tree_folder_new(args, results_folder, not_final=False, set_skip_args=False):
+    # tree_folder = None
+
+    if set_skip_args:
+        # Start with assuming we can skip everything
+        args.skip_greedy_merging = True
+        args.skip_redo_starry = True
+        args.skip_opt_times = True
+        args.skip_nnn_reordering = True
+        args.skip_reorder_edges = True
+
+    # We go over the possible tree folders in reverse order, i.e., most advanced first, and check whether it's present
+    # 1. Finished tree folder
+    if not not_final:
+        dir_path = getOutputFolder(zscore_cutoff=args.zscore_cutoff, tmp_file=os.path.basename(args.tmp_folder),
+                                   final=True)
+        if os.path.exists(os.path.join(results_folder, dir_path, 'vertInfo.txt')):
+            return dir_path
+
+    # 2. Check if done all computation steps, except for the final metadata
+    dir_path = getOutputFolder(zscore_cutoff=args.zscore_cutoff, redo_starry=True, opt_times=True, final=False,
+                               reorderedEdges=True, nnn_reorder=True, tmp_file=os.path.basename(args.tmp_folder))
+    if os.path.exists(os.path.join(results_folder, dir_path, 'vertInfo.txt')):
+        return dir_path
+
+    # 3. Check if done everything but swapping the order of branches and setting root
+    if set_skip_args:
+        args.skip_reorder_edges = False
+    dir_path = getOutputFolder(zscore_cutoff=args.zscore_cutoff, redo_starry=True, opt_times=True, final=False,
+                               nnn_reorder=True, reorderedEdges=False, tmp_file=os.path.basename(args.tmp_folder))
+    if os.path.exists(os.path.join(results_folder, dir_path, 'vertInfo.txt')):
+        return dir_path
+
+    # 4. Check if done everything up to nn-interchanges
+    if set_skip_args:
+        args.skip_nnn_reordering = False
+    dir_path = getOutputFolder(zscore_cutoff=args.zscore_cutoff, redo_starry=True, opt_times=True, final=False,
+                               nnn_reorder=False, reorderedEdges=False, tmp_file=os.path.basename(args.tmp_folder))
+    if os.path.exists(os.path.join(results_folder, dir_path, 'vertInfo.txt')):
+        return dir_path
+
+    # 4. Check if done everything up to time optimization
+    if set_skip_args:
+        args.skip_opt_times = False
+    dir_path = getOutputFolder(zscore_cutoff=args.zscore_cutoff, redo_starry=True, opt_times=False, final=False,
+                               nnn_reorder=False, reorderedEdges=False, tmp_file=os.path.basename(args.tmp_folder))
+    if os.path.exists(os.path.join(results_folder, dir_path, 'vertInfo.txt')):
+        return dir_path
+
+    # 4. Check if done everything up to redoing-starry, i.e., only the greedy merging
+    if set_skip_args:
+        args.skip_redo_starry = False
+    dir_path = getOutputFolder(zscore_cutoff=args.zscore_cutoff, redo_starry=False, opt_times=False, final=False,
+                               nnn_reorder=False, reorderedEdges=False, tmp_file=os.path.basename(args.tmp_folder))
+    if os.path.exists(os.path.join(results_folder, dir_path, 'vertInfo.txt')):
+        return dir_path
+
+    # 5. Check if only preprocessing has been done
+    if set_skip_args:
+        args.skip_greedy_merging = False
+    dir_path = getOutputFolder(zscore_cutoff=args.zscore_cutoff, greedy=False, redo_starry=False, opt_times=False,
+                               final=False, tmp_file=os.path.basename(args.tmp_folder))
+    if os.path.exists(os.path.join(results_folder, dir_path, 'vertInfo.txt')):
+        return dir_path
+
+    # If nothing has been done, just return the results_folder
+    return results_folder
 
 def clean_up_redundant_data_files(scData, args, verbose=True):
     if verbose:
