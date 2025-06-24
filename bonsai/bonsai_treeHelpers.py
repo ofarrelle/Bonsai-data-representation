@@ -339,6 +339,7 @@ class TreeNode:
         new_children = []
         new_parent = None
         old_tParents = []
+        self.isRoot = False
         for node in self.childNodes:
             if node.vert_ind == parent_ind:
                 new_parent = node
@@ -3179,13 +3180,13 @@ class Tree:
         the_child.tParent = delta
 
         # Renumber vert_inds on tree such that they are in line with a depth-first search
-        vertIndToNode, self.nNodes = self.root.renumber_verts(vertIndToNode={}, vert_count=0, include_nodeInd=True)
+        vertIndToNode, self.nNodes = self.root.renumber_verts(vertIndToNode={}, vert_count=0, include_nodeInd=False)
         self.vert_ind_to_node = vertIndToNode
         self.root.storeParent()
 
         self.reset_root(new_root_ind=midpoint_root_node.vert_ind)
 
-        vertIndToNode, self.nNodes = self.root.renumber_verts(vertIndToNode={}, vert_count=0, include_nodeInd=True)
+        vertIndToNode, self.nNodes = self.root.renumber_verts(vertIndToNode={}, vert_count=0, include_nodeInd=False)
         self.vert_ind_to_node = vertIndToNode
         self.root.storeParent()
 
@@ -3197,7 +3198,7 @@ class Tree:
                                                                  get_cell_ids_all_splits=False, node_id_to_n_cells=None,
                                                                  verbose=False)
         child_node_id, parent_node_id = mindist_edge[0]
-        vertIndToNode, self.nNodes = self.root.renumber_verts(vertIndToNode={}, vert_count=0, include_nodeInd=True)
+        vertIndToNode, self.nNodes = self.root.renumber_verts(vertIndToNode={}, vert_count=0, include_nodeInd=False)
         for vert_ind, node in vertIndToNode.items():
             if node.nodeId == parent_node_id:
                 the_parent = node
@@ -3231,13 +3232,13 @@ class Tree:
         the_child.tParent = delta
 
         # Renumber vert_inds on tree such that they are in line with a depth-first search
-        vertIndToNode, self.nNodes = self.root.renumber_verts(vertIndToNode={}, vert_count=0, include_nodeInd=True)
+        vertIndToNode, self.nNodes = self.root.renumber_verts(vertIndToNode={}, vert_count=0, include_nodeInd=False)
         self.vert_ind_to_node = vertIndToNode
         self.root.storeParent()
 
         self.reset_root(new_root_ind=midpoint_root_node.vert_ind)
 
-        vertIndToNode, self.nNodes = self.root.renumber_verts(vertIndToNode={}, vert_count=0, include_nodeInd=True)
+        vertIndToNode, self.nNodes = self.root.renumber_verts(vertIndToNode={}, vert_count=0, include_nodeInd=False)
         self.vert_ind_to_node = vertIndToNode
         self.root.storeParent()
         return True
