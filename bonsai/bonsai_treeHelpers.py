@@ -339,6 +339,7 @@ class TreeNode:
         new_children = []
         new_parent = None
         old_tParents = []
+        self.isRoot = False
         for node in self.childNodes:
             if node.vert_ind == parent_ind:
                 new_parent = node
