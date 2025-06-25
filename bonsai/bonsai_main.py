@@ -521,6 +521,9 @@ if args.step in ['metadata', 'all']:
     #                                redo_starry=(not args.skip_redo_starry), opt_times=(not args.skip_opt_times),
     #                                reorderedEdges=True, tmp_file=os.path.basename(args.tmp_folder),
     #                                nnn_reorder=(not args.skip_nnn_reordering))
+    if scData is None:
+        scDataTmp = SCData(onlyObject=True, dataset=args.dataset, results_folder=args.results_folder)
+    results_folder = scData.result_path() if (scData is not None) else scDataTmp.result_path()
     if args.pickup_intermediate:
         dir_path = getOutputFolder(zscore_cutoff=args.zscore_cutoff, tmp_file=os.path.basename(args.tmp_folder),
                                    final=True)
