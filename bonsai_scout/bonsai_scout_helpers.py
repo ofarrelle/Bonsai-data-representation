@@ -784,10 +784,12 @@ class Bonvis_figure:
         vert_inds_per_wedge = []
         all_wedges = []
         all_facecolors = []
+        all_coords = []
 
         for vert_ind in verts_w_multi_objs:
             # Find radius for vertex
-            radius = self.vert_to_size[vert_ind]
+            # We divide by two for multi-obj-verts, since the Wedge-object wants a radius, while Ellipse wants a height and width
+            radius = self.vert_to_size[vert_ind] / 2
             # Find coordinates for vertex
             coords = node_coords[vert_ind]
             # Find all objects mapping to this vert
@@ -815,15 +817,21 @@ class Bonvis_figure:
                 vert_inds_per_wedge.append(vert_ind)
                 all_wedges.append(Wedge(center=coords, r=radius, theta1=deg0, theta2=degf, zorder=6))
                 all_facecolors.append(color)
+                all_coords.append(coords)
                 deg0 = degf
 
         kwargs = {'match_original': False, 'facecolors': all_facecolors,
                   'edgecolors': node_style['edgecolor'], 'linewidths': node_style['lw_cell'], 'zorder': 6}
         self.multi_obj['kwargs'] = kwargs
         self.multi_obj['wedges'] = all_wedges
+        # We store the coordinates of the center of each wedge in data-coordinates. At plotting time, we will still do the transform to
+        # axes-coordinates. 
+        self.multi_obj['coords'] = all_coords
         self.multi_obj['vert_inds_per_wedge'] = vert_inds_per_wedge
-        self.multi_obj['coll'] = PatchCollection(self.multi_obj['wedges'],
-                                                 **self.multi_obj['kwargs'])
+
+        # For the multi-object collections, we only make the collection at plotting time, so we don't do it here anymore
+        # self.multi_obj['coll'] = PatchCollection(self.multi_obj['wedges'],
+        #                                          **self.multi_obj['kwargs'])
         return
 
         # # Finally create collection for verts with multiple cells/cellstates
@@ -1447,13 +1455,15 @@ class Bonvis_figure:
         self.single_obj['coll'].set_offsets(node_coords[self.single_obj['vert_inds'], :])
 
         if self.multi_obj is not None:
-            wedges = []
+            # We re-make the wedge-collection at plotting time (once axes-transformation is known), so here
+            # we only have to store the coordinates in "data-coordinates".
+            all_coords = []
             for ind, wedge in enumerate(self.multi_obj['wedges']):
-                wedge.set_center(node_coords[self.multi_obj['vert_inds_per_wedge'][ind], :])
-                wedges.append(wedge)
-            self.multi_obj['wedges'] = wedges
-            self.multi_obj['coll'] = PatchCollection(self.multi_obj['wedges'],
-                                                    **self.multi_obj['kwargs'])
+                coords = node_coords[self.multi_obj['vert_inds_per_wedge'][ind], :]
+                all_coords.append(coords)
+            self.multi_obj['coords'] = all_coords
+            # self.multi_obj['coll'] = PatchCollection(self.multi_obj['wedges'],
+            #                                         **self.multi_obj['kwargs'])
 
     def create_figure(self, figsize=(12, 12), make_background=True, no_edges=False,
                       verbose=False, fig=None, ax=None):
@@ -1499,11 +1509,16 @@ class Bonvis_figure:
 
         self.int_obj['coll'].set_offset_transform(self.ax.transData)
         self.single_obj['coll'].set_offset_transform(self.ax.transData)
-        if self.multi_obj is not None:
-            self.multi_obj['coll'].set_transform(self.ax.transData)
         self.ax.add_collection(self.int_obj['coll'])
         self.ax.add_collection(self.single_obj['coll'])
         if self.multi_obj is not None:
+            # The wedges have been created with a center that is in data-coordinates. We want to transform this into axes coordinates.
+            # all_wedges = []
+            transf = self.ax.transData + self.ax.transAxes.inverted()
+            for ind, wedge in enumerate(self.multi_obj['wedges']):
+                wedge.set_center(transf.transform(self.multi_obj['coords'][ind]))
+            self.multi_obj['coll'] = PatchCollection(self.multi_obj['wedges'], **self.multi_obj['kwargs'])
+            self.multi_obj['coll'].set_transform(self.ax.transAxes)
             self.ax.add_collection(self.multi_obj['coll'])
         self.is_present['nodes'] = True
         return self.fig
