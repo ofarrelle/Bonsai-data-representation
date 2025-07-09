@@ -90,27 +90,6 @@ UB_ellipsoid_size: 1.0
 
 ########################### Information on starting from previous runs configurations ###############################
 
-# The main Bonsai calculation takes the 4 below steps. After each step, the current tree will be stored in the results-
-# folder. Therefore, if Bonsai fails (or runs out of time) in some step, it can be picked up from the end-result of the
-# previous step. In that case, set skip_<step> of all previous steps to true.
-
-#  - greedy_merging: greedily merging pairs starting from the star-tree
-#  - redo_starry: detecting nodes that still have more than 2 children, and checking if more merges can be done
-#  - opt_times: optimizing all branch length simultaneously once
-#  - nnn_reordering: taking any edge and interchanging children of the two connected nodes
-
-# skip_greedy_merging [bool, default=false]
-skip_greedy_merging: false
-
-# skip_redo_starry [bool, default=false]
-skip_redo_starry: false
-
-# skip_opt_times [bool, default=false]
-skip_opt_times: false
-
-# skip_nnn_reordering [bool, default=false]
-skip_nnn_reordering: false
-
 # pickup_intermediate [bool, default=false]:
 # Decides whether we look for intermediate results from previous runs or not. These
 # intermediate results are periodically stored during any normal run, and can thus be used when a run did not finalize.

@@ -102,16 +102,27 @@ parser.add_argument("--rescale_by_var", type=str2bool, default=True,
 
 
 """Information on starting from previous runs configurations"""
+# If Bonsai was already ran with these configurations, but failed (e.g. because of a time limit), it can be re-started
+# from the last completed results by setting --pickup_intermediate True.
+# In that case, we will look for the furthest advanced result in the results-folder. Note that the results-folder thus
+# has to be cleaned of results that you don't want to be picked up.
 
-# The main Bonsai calculation takes the 4 below steps. After each step, the current tree will be stored in the results-
+# The main Bonsai calculation takes the 5 below steps. After each step, the current tree will be stored in the results-
 # folder. Therefore, if Bonsai fails (or runs out of time) in some step, it can be picked up from the end-result of the
-# previous step. In that case, set skip_<step> of all previous steps to true.
+# previous step.
 
 #  - greedy_merging: greedily merging pairs starting from the star-tree
 #  - redo_starry: detecting nodes that still have more than 2 children, and checking if more merges can be done
 #  - opt_times: optimizing all branch length simultaneously once
 #  - nnn_reordering: taking any edge and interchanging children of the two connected nodes
+#  - reorder_edges: swapping the order of branches to ladderize the tree and re-setting the root
 
+parser.add_argument('--pickup_intermediate', type=str2bool, default=False,
+                    help='Decides whether we look for intermediate results from previous runs or not. '
+                         'These intermediate results are periodically stored during any normal run, and can thus be '
+                         'used when a run did not finalize.')
+
+# The following arguments are DEPRECATED! They won't do anything anymore.
 # Arguments that decide how much post-optimisation is done
 parser.add_argument('--skip_greedy_merging', type=str2bool, default=False,
                     help='Used to skip tree reconstruction when this is already done and stored')
@@ -124,11 +135,6 @@ parser.add_argument("--skip_nnn_reordering", type=str2bool, default=False,
                     help="Decides whether we go over edges and try to reconfigure all connected nodes (which are thus"
                          "next-nearest-neighbours).")
 
-parser.add_argument('--pickup_intermediate', type=str2bool, default=False,
-                    help='Decides whether we look for intermediate results from previous runs or not. '
-                         'These intermediate results are periodically stored during any normal run, and can thus be '
-                         'used when a run did not finalize.')
-
 parser.add_argument('--tmp_folder', type=str, default='',
                     help='(ADVANCED): Path (absolute path or relative to "bonsai-development") pointing to a '
                          'tree-folder from which Bonsai reconstruction will start. Relevant if one wants to start '
@@ -136,6 +142,13 @@ parser.add_argument('--tmp_folder', type=str, default='',
                          'tree-object where cellstates were connected to a common ancestor.')
 
 args = parser.parse_args()
+
+# Warn about deprecated arguments
+deprecated_args = ['skip_greedy_merging', 'skip_opt_times', 'skip_redo_starry', 'skip_nnn_reordering']
+for dep_arg in deprecated_args:
+    if hasattr(args, dep_arg) and getattr(args, dep_arg):
+        print("WARNING: The arguments {} are deprecated and no longer have any effect. Use --pickup_intermediate True"
+              " to pick up intermediate results from previous Bonsai runs.")
 
 template_yaml_path = os.path.join('bonsai', 'config_template_do_not_change', 'config_template.yaml')
 if not os.path.exists(template_yaml_path):

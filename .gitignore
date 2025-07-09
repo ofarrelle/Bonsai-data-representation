@@ -145,3 +145,4 @@ examples/1_simple_example/results/*
 useful_scripts_not_bonsai/simulating_datasets/analyzing_simulated_datasets/results/
 slurm_runs_pipeline/
 .idea/Private-bonsai.iml
+local_scripts/*

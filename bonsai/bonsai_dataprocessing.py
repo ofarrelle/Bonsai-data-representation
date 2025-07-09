@@ -949,7 +949,7 @@ class SCData:
                 delim = ','
             else:
                 continue
-            annot_input = pd.read_csv(filepath, header=0, index_col=0, delimiter=delim)  # .astype(dtype=str)
+            annot_input = pd.read_csv(filepath, header=0, index_col=0, delimiter=delim, dtype={0: str})  # .astype(dtype=str)
             if hasattr(self.metadata, 'nCss') and (
                     annot_input.shape[0] in [self.metadata.nCss - 1, self.metadata.nCss]):
                 if annot_input.shape[0] == (self.metadata.nCss - 1):
@@ -968,7 +968,7 @@ class SCData:
                     annotation_df = None
             elif annot_input.shape[0] in [self.metadata.nCells - 1, self.metadata.nCells]:
                 if annot_input.shape[0] == (self.metadata.nCells - 1):
-                    annot_input = pd.read_csv(filepath, header=None, index_col=0, delimiter=delim)
+                    annot_input = pd.read_csv(filepath, header=None, index_col=0, delimiter=delim, dtype={0: str})
                     annot_input.columns = ['Annotation {}_{}'.format(ind_file, ind) for ind in
                                            range(annot_input.shape[1])]
                 cell_id_to_ind = {cell_id: ind for ind, cell_id in enumerate(annot_input.index)}
@@ -1320,7 +1320,7 @@ def nnnReorderRandom(args, outputFolder, verbose=False, randomMoves=0,
         if args.pickup_intermediate and os.path.exists(tmp_folder):
             intermediateFolders = os.listdir(tmp_folder)
             if len(intermediateFolders):
-                intermediateFolder, tmpTreeInd = get_latest_intermediate(intermediateFolders, base='nnn')
+                intermediateFolder, stored_tree_ind = get_latest_intermediate(intermediateFolders, base='nnn')
                 if intermediateFolder is not None:
                     # scData.tree = unpickleTree(tmp_folder, intermediateFile)
                     scData = loadReconstructedTreeAndData(args, os.path.join(tmp_folder, intermediateFolder),
@@ -1634,7 +1634,7 @@ def nnnReorder(args, tmp_folder, stored_tree_ind, maxMoves=100, closenessBound=0
         #                                              'tree_{}.nwk'.format(bs_glob.nwk_counter)))
         #     bs_glob.nwk_counter += 1
 
-        if moveCounter % 1000 == 0:
+        if moveCounter % 100 == 0:
             if mpiInfo.rank == 0:
                 scData.storeTreeInFolder(os.path.join(tmp_folder, 'nnn_tree_%d' % stored_tree_ind),
                                          with_coords=False, verbose=verbose, cleanup_tree=False)
