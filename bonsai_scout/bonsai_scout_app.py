@@ -1402,7 +1402,7 @@ def server(input, output, session: Session):
         if curr_annotation_cats.get() is None:
             curr_annotation_cats.set(bv_objct.init_annotation_cats)
         selection_dict = {"No subset": {'no_subset': "No subset"}, "Subtree": {"subtree": "Subtree"}}
-        if curr_annotation_cats.get() is not None:
+        if (bv_objct.bonvis_settings.node_style['annot_info'].color_type == 'categorical') and (curr_annotation_cats.get() is not None):
             selection_dict["Annotation"] = {cat: cat for cat in curr_annotation_cats.get()}
         # print(selection_dict)
         return ui.input_selectize('selected_annot', "Pick annotation", selection_dict, selected=bv_objct.init_selected_annot),
@@ -1413,7 +1413,7 @@ def server(input, output, session: Session):
         if curr_annotation_cats.get() is None:
             curr_annotation_cats.set(bv_objct.init_annotation_cats)
         selection_dict = {"All remaining cells": {'no_subset': "All remaining cells"}, "Subtree": {"subtree": "Subtree"}}
-        if curr_annotation_cats.get() is not None:
+        if (bv_objct.bonvis_settings.node_style['annot_info'].color_type == 'categorical') and (curr_annotation_cats.get() is not None):
             selection_dict["Annotation"] = {cat: cat for cat in curr_annotation_cats.get()}
         # print(selection_dict)
         return ui.input_selectize('selected_annot_2', "Pick annotation", selection_dict, selected=bv_objct.init_selected_annot),
@@ -1424,7 +1424,7 @@ def server(input, output, session: Session):
         if curr_annotation_cats.get() is None:
             curr_annotation_cats.set(bv_objct.init_annotation_cats)
         selection_dict = {"No subset": {'no_subset': "No subset"}}
-        if curr_annotation_cats.get() is not None:
+        if (bv_objct.bonvis_settings.node_style['annot_info'].color_type == 'categorical') and (curr_annotation_cats.get() is not None):
             selection_dict["Annotation"] = {cat: cat for cat in curr_annotation_cats.get()}
         # print(selection_dict)
         return ui.input_selectize('selected_annot_annot', "Pick annotation", selection_dict, selected=bv_objct.init_selected_annot),
