@@ -114,10 +114,6 @@ python3 bonsai/create_config_file.py \
   --input_is_sanity_output True \
   --zscore_cutoff 1.0 \
   --UB_ellipsoid_size 1.0 \
-  --skip_greedy_merging False \
-  --skip_redo_starry False \
-  --skip_opt_times False \
-  --skip_nnn_reordering False \
   --nnn_n_randommoves 1000 \
   --nnn_n_randomtrees 2 \
   --pickup_intermediate False \
@@ -134,10 +130,21 @@ python3 bonsai/bonsai_main.py \
   --step all
 ```
 
-### Running Bonsai using parallel computation
+### Running *Bonsai* using parallel computation
 For a parallel run, one uses the same arguments, except that we call the script through *OpenMPI* like:
 ```
-mpiexec -n <NUMBER_OF_CORES> python -m mpi4py bonsai_main.py --config_filepath <YOUR_DESIRED_CONFIG_FOLDER>/new_yaml.yaml --step all
+mpiexec -n <NUMBER_OF_CORES> python -m mpi4py bonsai_main.py \
+  --config_filepath <YOUR_DESIRED_CONFIG_FOLDER>/new_yaml.yaml \
+  --step all
+```
+
+### Restarting *Bonsai* from an intermediate point
+It may happen that a *Bonsai*-run gets aborted, e.g. for exceeding some time-limit. Fortunately, *Bonsai* stores intermediate results at regular intervals. Using the argument `--pickup_intermediate True`, we can restart *Bonsai* and it will automatically find the latest intermediate result and re-start its computation from there. [Note: This functionality has only been introduced on July 9, 2025, so make sure to first pull a recent version of the code]. A typical run command would thus be:
+```
+mpiexec -n <NUMBER_OF_CORES> python -m mpi4py bonsai_main.py \
+  --config_filepath <YOUR_DESIRED_CONFIG_FOLDER>/new_yaml.yaml \
+  --step all \
+  --pickup_intermediate True
 ```
 
 ### The *Bonsai* results
@@ -400,14 +407,10 @@ Decides whether nearest-neighbours are used to get candidate pairs to merge. Set
 This is a purely computational optimization that does not affect the final result. Decides whether we calculate an upper bound (UB) for the increase in loglikelihood that merging a certain pair can yield, given that a the root stays in a certain ellipsoid. Using these upper bounds, the calculation can be sped up enormously. If the UB_ellipsoid_size < 0, this estimation will not be used. Note that this will not lead to a different final tree, so we recommend not using that setting. Otherwise, it decides how large the ellipsoid is in root-position/precision space for which we estimate the UB. Larger values will result in looser UB, so that more candidate pairs per merge have to be considered. However, it will also result in longer validity of the UB-estimation, so that more merges can be done without re-calculating the upper bounds. Ellipsoid sizes below 5 are reasonable to try, we recommend to start at 1. Ellipsoid size will be updated dynamically by Bonsai based on the results.
 
 ### Starting from the intermediate results of previous runs
-The main Bonsai calculation takes the 4 below steps. After each step, the current tree will be stored in the results-folder. Therefore, if Bonsai fails (or runs out of time) in some step, it can be picked up from the end-result of the previous step. In that case, set skip_<step> of all previous steps to true. (Skipping these steps will only work when `bonsai/bonsai_main.py` is run with `--step core_calc`, and not with `--step all`).
-* greedy_merging: greedily merging pairs starting from the star-tree
-* redo_starry: detecting nodes that still have more than 2 children, and checking if more merges can be done
-* opt_times: optimizing all branch length simultaneously once
-* nnn_reordering: taking any edge and interchanging children of the two connected nodes
+If *Bonsai* was already ran with these configurations, but failed (e.g. because of a time limit), it can be re-started from the last completed results by setting --pickup_intermediate True. In that case, we will look for the furthest advanced result in the results-folder. Note that the results-folder thus has to be cleaned of results that you don't want to be picked up.
 
-* `--pickup_intermediate [bool, default=false]`: (ADVANCED)
-Decides whether we look for intermediate results from previous runs or not. These intermediate results are periodically stored during any normal run, and can thus be used when a run did not finalize. (Note that this parameter does not mean we automatically skip over one or several of the four main steps of *Bonsai*, but will look for intermediate results within the first step where you re-start *Bonsai*.
+* `--pickup_intermediate [bool, default=false]`:
+Decides whether we look for intermediate results from previous runs or not. These intermediate results are periodically stored during any normal run, and can thus be used when a run did not finalize.
 
 ## Optional downstream analyses
 In *Bonsai-scout*, we, next to interactive visualization, offer 1) tree-based clustering, 2) marker gene/feature detection, and 3) calculating the average features for different groups. The necessary code is provided in the `downstream_analyses`-subfolder. 
