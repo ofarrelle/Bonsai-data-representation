@@ -125,14 +125,14 @@ parser.add_argument('--pickup_intermediate', type=str2bool, default=False,
 # The following arguments are DEPRECATED! They won't do anything anymore.
 # Arguments that decide how much post-optimisation is done
 parser.add_argument('--skip_greedy_merging', type=str2bool, default=False,
-                    help='Used to skip tree reconstruction when this is already done and stored')
+                    help='[DEPRECATED!] Used to skip tree reconstruction when this is already done and stored')
 parser.add_argument("--skip_opt_times", type=str2bool, default=False,
-                    help="Decides whether all times are optimised after tree reconstruction.")
+                    help="[DEPRECATED!] Decides whether all times are optimised after tree reconstruction.")
 parser.add_argument("--skip_redo_starry", type=str2bool, default=False,
-                    help="Decides whether, after the first greedy merging, for nodes with more than 2 children, "
+                    help="[DEPRECATED!] Decides whether, after the first greedy merging, for nodes with more than 2 children, "
                          "pairs of children are considered for merge.")
 parser.add_argument("--skip_nnn_reordering", type=str2bool, default=False,
-                    help="Decides whether we go over edges and try to reconfigure all connected nodes (which are thus"
+                    help="[DEPRECATED!] Decides whether we go over edges and try to reconfigure all connected nodes (which are thus"
                          "next-nearest-neighbours).")
 
 parser.add_argument('--tmp_folder', type=str, default='',
