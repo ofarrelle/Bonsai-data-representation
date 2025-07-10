@@ -1050,6 +1050,7 @@ class Bonvis_figure:
                     for cell in node_style['cells_masked']:
                         css_masked += [self.bonvis_metadata.cell_ind_to_cs_ind[str(cell)]]
                     css_masked = list(np.unique(css_masked))
+                cell_to_celltype = cell_to_celltype.astype(str)
                 cell_to_celltype[css_masked] = np.nan
                 cell_to_color[css_masked] = masked_color
             else:
@@ -1060,9 +1061,11 @@ class Bonvis_figure:
                             self.bonvis_metadata.cell_info['cell_info_dict']['cell_ind_to_vert_ind'])
                         verts_masked = list(cell_ind_to_vert_ind[np.array(node_style['cells_masked'])])
                         verts_masked = np.union1d(verts_masked, self.bonvis_metadata.cell_info['int_vert_inds'])
+                    cell_to_celltype = cell_to_celltype.astype(str)
                     cell_to_celltype[verts_masked] = np.nan
                     cell_to_color[verts_masked] = masked_color
                 else:
+                    cell_to_celltype = cell_to_celltype.astype(str)
                     cell_to_celltype[node_style['verts_masked']] = np.nan
                     cell_to_color[node_style['verts_masked']] = masked_color
         return cell_to_celltype, cell_to_color
