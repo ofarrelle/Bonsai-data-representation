@@ -1987,7 +1987,28 @@ class TreeNode:
     def getNNPairs(self, xrAIRoot, NNInfo, kNN, verbose=False):
         start = time.time()
         # We first gather all ltq-information about the children
-        ltqsCh, _, _ = self.getInfoChildren()
+        ltqsCh, ltqsVarsCh, _ = self.getInfoChildren()
+
+        # Get gene variances
+        geneVariances = bs_glob.geneVariances
+        geneMeans = bs_glob.geneMeans
+
+        # This does it all in one go:
+        rev_factor = (1 / (1 + ltqsVarsCh))
+        post_ltqsCh = (ltqsCh * np.sqrt(geneVariances[:, None]) - geneMeans[:, None]) * rev_factor
+
+        # post_xrAIRoot = (xrAIRoot * np.sqrt(geneVariances) - geneMeans) * rev_factor
+
+        # Undo rescaling by var and shifting by mean
+        # post_ltqsCh = ltqsCh * np.sqrt(bs_glob.geneVariances[:, None]) - bs_glob.geneMeans[:, None]
+        # post_ltqsVarsCh = ltqsVarsCh * bs_glob.geneVariances[:, None]
+
+        # Reconstruct posteriors
+        # factors = geneVariances[:, None] / (geneVariances[:, None] + post_ltqsVarsCh)
+        # post_ltqsCh = ltqsCh - (bs_glob.geneMeans / bs_glob.geneVariances)[:, None]
+        # post_ltqsCh = post_ltqsCh * factors
+        # post_ltqsVarsCh = post_ltqsVarsCh * factors
+        # post_ltqsCh = post_ltqsCh  # + bs_glob.geneMeans[:, None]
 
         # We center the ltq-information around the root
         ltqsCh -= xrAIRoot[:, None]
