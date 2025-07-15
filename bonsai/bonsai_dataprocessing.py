@@ -177,6 +177,7 @@ class SCData:
         #     self.unscaled = copy.deepcopy(originalData)
 
         self.metadata.geneVariances = originalData.geneVariances
+        self.metadata.geneMeans = originalData.geneMeans
         # Scale diffusion by estimated gene variance.
         if rescale_by_var and (originalData.ltqs is not None) and (originalData.ltqsVars is not None):
             originalData.ltqsVars /= (originalData.geneVariances[:, None])
