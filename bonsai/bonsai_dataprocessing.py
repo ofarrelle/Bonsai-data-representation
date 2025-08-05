@@ -2032,6 +2032,8 @@ def load_data_for_tree(scData, tree_folder, vertind_to_node, get_all_data=True, 
     bs_glob.nGenes = scData.metadata.nGenes
     bs_glob.nCells = scData.metadata.nCells
     bs_glob.nNodes = scData.tree.nNodes
+    bs_glob.geneMeans = scData.metadata.geneMeans
+    bs_glob.geneVariances = scData.metadata.geneVariances
 
     # Try to read data in following order:
     # - see if there is data for all vertices stored where the tree is stored
