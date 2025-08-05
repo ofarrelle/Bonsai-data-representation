@@ -1994,7 +1994,9 @@ class TreeNode:
         geneVariances = bs_glob.geneVariances
         geneMeans = bs_glob.geneMeans
 
-        # This does it all in one go:
+        # Bonsai usually works with coordinates for the likelihood expression, but for the nearest-neighbor search
+        # we want to use maximal posterior ltqs. Therefore, we do this transformation based on the stored gene-means and
+        # gene-variances:
         rev_factor = (1 / (1 + ltqsVarsCh))
         # The following is the correct formula for reconstructing the variances, however, we want to rescale the
         # variances by sqrt(geneVariances), so we remove that
@@ -2046,7 +2048,8 @@ class TreeNode:
     def get_new_nn_pairs(self, new_node, NNInfo, runConfigs, UBInfo=None, old_pairs_list=None, update_nn_index=False,
                          xrAIRoot=None, xrVarsAIRoot=None):
         if UBInfo is not None:
-            # TODO: Check if this is necessary: # In this case also delete old UB-information on the "new_node", since we're going to calculate that again.
+            # TODO: Check if this is necessary: # In this case also delete old UB-information on the "new_node",
+            #  since we're going to calculate that again.
             to_be_deleted = np.where(UBInfo['pairs'] == new_node.nodeInd)[0]
             UBInfo['pairs'] = np.delete(UBInfo['pairs'], to_be_deleted, axis=0)
             UBInfo['UBs'] = np.delete(UBInfo['UBs'], to_be_deleted)

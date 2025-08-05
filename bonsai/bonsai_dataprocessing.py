@@ -178,6 +178,12 @@ class SCData:
 
         self.metadata.geneVariances = originalData.geneVariances
         self.metadata.geneMeans = originalData.geneMeans
+
+        if self.metadata.geneMeans is None:
+            self.metadata.geneMeans = np.zeros(self.metadata.nGenes)
+        if self.metadata.geneVariances is None:
+            self.metadata.geneVariances = np.ones(self.metadata.nGenes)
+
         # Scale diffusion by estimated gene variance.
         if rescale_by_var and (originalData.ltqs is not None) and (originalData.ltqsVars is not None):
             originalData.ltqsVars /= (originalData.geneVariances[:, None])
@@ -204,6 +210,8 @@ class SCData:
         # Some variables are nice to have access to from all functions
         bs_glob.nCells = self.metadata.nCells
         bs_glob.nGenes = self.metadata.nGenes
+        bs_glob.geneVariances = self.metadata.geneVariances
+        bs_glob.geneMeans = self.metadata.geneMeans
 
         # Update recursion limits so that very deep trees don't create errors
         set_recursion_limits(int(2 * bs_glob.nCells))

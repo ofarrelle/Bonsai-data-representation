@@ -260,8 +260,6 @@ if args.step in ['core_calc', 'all']:
                                                           all_ranks=False, rel_to_results=False, calc_loglik=True)
         Path(tmp_folder).mkdir(parents=True, exist_ok=True)
         nChildNN = -1 if args.use_knn < 0 else 50
-        bs_glob.geneVariances = scData.metadata.geneVariances
-        bs_glob.geneMeans = scData.metadata.geneMeans
         scData.tree.root.mergeChildrenUB(scData.tree.root.ltqs, scData.tree.root.getW(), scData=scData,
                                          sequential=SEQUENTIAL, verbose=args.verbose,
                                          ellipsoidSize=origEllipsoidSize, outputFolder=outputFolder, nChildNN=nChildNN,
