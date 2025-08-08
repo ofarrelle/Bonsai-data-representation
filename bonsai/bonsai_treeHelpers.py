@@ -1989,25 +1989,14 @@ class TreeNode:
         start = time.time()
         # We first gather all ltq-information about the children
         ltqsCh, ltqsVarsCh, _ = self.getInfoChildren()
-
-        # Get gene variances
-        geneVariances = bs_glob.geneVariances
-        geneMeans = bs_glob.geneMeans
-
-        # Bonsai usually works with coordinates for the likelihood expression, but for the nearest-neighbor search
-        # we want to use maximal posterior ltqs. Therefore, we do this transformation based on the stored gene-means and
-        # gene-variances:
-        rev_factor = (1 / (1 + ltqsVarsCh))
-        # The following is the correct formula for reconstructing the variances, however, we want to rescale the
-        # variances by sqrt(geneVariances), so we remove that
-        # post_ltqsCh = (ltqsCh * np.sqrt(geneVariances[:, None]) - geneMeans[:, None]) * rev_factor
-        post_ltqsCh = (ltqsCh - geneMeans[:, None] / np.sqrt(geneVariances[:, None])) * rev_factor
-
+        # (Re-)introduce the Gaussian prior to get posterior estimates for the child-positions
+        post_ltqsCh = lik_to_post_coords(ltqsCh, ltqsVarsCh)
+        # Also get the posterior position for the root
+        post_xrAIRoot = lik_to_post_coords(xrAIRoot, xrVarsAIRoot)
         # We center the ltq-information around the root
-        rev_factor_root = (1 / (1 + xrVarsAIRoot))
-        post_xrAIRoot = (xrAIRoot - geneMeans / np.sqrt(geneVariances)) * rev_factor_root
         post_ltqsCh -= post_xrAIRoot[:, None]
         NNInfo['subtracted_mean'] = post_xrAIRoot
+
         # We ask for the nearest neighbours
         nodeInds = [child.nodeInd for child in self.childNodes]
         # TODO: Check how to get approxNNs beyond the brute-force sklearn one
@@ -2060,70 +2049,34 @@ class TreeNode:
                 old_pairs_list[ind_pairs] = [old_pair for old_pair in old_pairs if new_node_ind not in old_pair]
         # Here, we should just get NN-pairs with the new ancestor. Take twice as many neighbours as for the
         # other nodes to compensate for no other nodes adding connections to ancestor
-        if not update_nn_index:
-            ltqs = new_node.ltqs
-            ltqsVars = new_node.getLtqsVars()
-
-            geneVariances = bs_glob.geneVariances
-            geneMeans = bs_glob.geneMeans
-
-            # This does it all in one go:
-            rev_factor = (1 / (1 + ltqsVars))
-            post_ltqs = (ltqs - geneMeans / np.sqrt(geneVariances)) * rev_factor
-
-            centered_query = (post_ltqs - NNInfo['subtracted_mean'])[:, None]
-            normalized_query = centered_query / np.linalg.norm(centered_query)
-            index, nns = getApproxNNs(normalized_query, index=NNInfo['index'],
-                                      k=20 * runConfigs['kNN'], pointsIds=[new_node.nodeInd], addPoints=False)
-        else:
+        if update_nn_index:
             # We gather information about the current children of the root
             ltqsCh, ltqsVarsCh, _ = self.getInfoChildren()
-
-            # Get gene variances
-            geneVariances = bs_glob.geneVariances
-            geneMeans = bs_glob.geneMeans
-
-            # This does it all in one go:
-            rev_factor = (1 / (1 + ltqsVarsCh))
-            # The following is the correct formula for reconstructing the variances, however, we want to rescale the
-            # variances by sqrt(geneVariances), so we remove that
-            # post_ltqsCh = (ltqsCh * np.sqrt(geneVariances[:, None]) - geneMeans[:, None]) * rev_factor
-            post_ltqsCh = (ltqsCh - geneMeans[:, None] / np.sqrt(geneVariances[:, None])) * rev_factor
-
+            # (Re-)introduce the Gaussian prior to get posterior estimates for the child-positions
+            post_ltqsCh = lik_to_post_coords(ltqsCh, ltqsVarsCh)
+            # Also get the posterior position for the root
+            post_xrAIRoot = lik_to_post_coords(xrAIRoot, xrVarsAIRoot)
             # We center the ltq-information around the root
-            rev_factor_root = (1 / (1 + xrVarsAIRoot))
-            post_xrAIRoot = (xrAIRoot - geneMeans / np.sqrt(geneVariances)) * rev_factor_root
             post_ltqsCh -= post_xrAIRoot[:, None]
-            NNInfo['subtracted_mean'] = post_xrAIRoot
-
-            # We center the ltq-information around the root
-            # ltqsCh -= xrAIRoot[:, None]
             NNInfo['subtracted_mean'] = post_xrAIRoot
 
             # Instead of taking cosine metric, we can also normalize the vectors and use squared-euclidean
             norms = np.linalg.norm(post_ltqsCh, axis=0)
             np.divide(post_ltqsCh, norms, out=post_ltqsCh)
 
-            # We ask for the nearest neighbours
+            # We update the index for the nearest neighbours
             nodeInds = [child.nodeInd for child in self.childNodes]
             pointsT = post_ltqsCh.T
             NNInfo['index'].fit(pointsT)
             NNInfo['index'].IDs = nodeInds
-
-            ltqs = new_node.ltqs
-            ltqsVars = new_node.getLtqsVars()
-
-            # This does it all in one go:
-            rev_factor = (1 / (1 + ltqsVars))
-            post_ltqs = (ltqs - geneMeans / np.sqrt(geneVariances)) * rev_factor
-
-            centered_query = (post_ltqs - NNInfo['subtracted_mean'])[:, None]
-
-            normalized_query = centered_query / np.linalg.norm(centered_query)
-
-            index, nns = getApproxNNs(normalized_query, index=NNInfo['index'],
-                                      k=20 * runConfigs['kNN'], pointsIds=[new_node.nodeInd], addPoints=False)
             NNInfo['leafToChild'] = {nodeInd: nodeInd for nodeInd in nodeInds}
+
+        # Get the posterior coordinates for the new node
+        post_ltqs = lik_to_post_coords(new_node.ltqs, new_node.getLtqsVars())
+        centered_query = (post_ltqs - NNInfo['subtracted_mean'])[:, None]
+        normalized_query = centered_query / np.linalg.norm(centered_query)
+        index, nns = getApproxNNs(normalized_query, index=NNInfo['index'],
+                                  k=20 * runConfigs['kNN'], pointsIds=[new_node.nodeInd], addPoints=False)
 
         nns = np.array(index.IDs)[nns]
         # Make list of unique neighbors that are not the node itself
@@ -4161,3 +4114,41 @@ def getEdgeDistVertNamesFromNode(node, edge_list, dist_list, orig_vert_names, in
                                                                                                         intCounter,
                                                                                                         nodeIndToNode)
     return edge_list, dist_list, orig_vert_names, intCounter, nodeIndToNode
+
+
+def lik_to_post_coords(ltqs_lik, ltqsVars_lik):
+    vectorYN = False
+    if ltqs_lik.ndim == 1:
+        vectorYN = True
+        ltqs_lik = ltqs_lik[:, None]
+        ltqsVars_lik = ltqsVars_lik[:, None]
+    geneMeans = bs_glob.geneMeans
+
+    # Bonsai usually works with coordinates for the likelihood expression, but for the nearest-neighbor search
+    # we want to use maximal posterior ltqs. Therefore, we (re-)introduce a Gaussian prior. Before this, we first want
+    # to undo the shift by the gene-mean and the rescaling for the diffusion prior:
+    if bs_glob.geneDiffusionScaling != 'geneVariances':
+        # In this case, gene-variances used for diffusion rescaling and for the prior are different, since the
+        # diffusion rescaling is just a single scalar
+        diffusion_scaling = bs_glob.geneDiffusionScaling
+        ltqsVars_retransformed = ltqsVars_lik * diffusion_scaling
+        # The correct formula for undoing the transformation would be
+        # ltqs_retransformed = ltqs_lik * np.sqrt(diffusion_scaling) - geneMeans[:, None]
+        # But we want to re-do the diffusion rescaling after, so it's more efficient to do it here
+        ltqs_retransformed = ltqs_lik - geneMeans[:, None] / np.sqrt(diffusion_scaling)
+        rev_factor = (1 / (1 + (ltqsVars_retransformed / bs_glob.geneVariances[:, None])))
+        ltqs_post = ltqs_retransformed * rev_factor
+    else:
+        # In this case, both vectors of gene-variances are the same, such that some steps simplify
+        # ltqsVars_retransformed = ltqsVars_lik * diffusion_scaling
+        # The correct formula for undoing the transformation would be
+        # ltqs_retransformed = ltqs_lik * np.sqrt(diffusion_scaling) - geneMeans[:, None]
+        # But we want to re-do the diffusion rescaling after, so it's more efficient to do it here
+        gene_variances = bs_glob.geneVariances[:, None]
+        ltqs_retransformed = ltqs_lik - geneMeans[:, None] / np.sqrt(gene_variances)
+        rev_factor = (1 / (1 + ltqsVars_lik))
+        ltqs_post = ltqs_retransformed * rev_factor
+
+    if vectorYN:
+        return ltqs_post.flatten()
+    return ltqs_post
