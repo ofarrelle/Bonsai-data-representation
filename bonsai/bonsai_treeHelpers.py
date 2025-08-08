@@ -2712,7 +2712,7 @@ class Tree:
         return edge_list, dist_list, orig_vert_names, starryYN, nodeIndToNode
 
     def getEdgeVertInfo(self, coords_folder=None, verbose=False, store_posterior_ltqs=False,
-                        undo_rescale_by_var=True, variances=None):
+                        geneDiffusionScaling=None, variances=None):
         edgeList, distList, nodeIndToVertId, _, nodeIndToNode = self.compile_tree_from_scData_tree()
         if coords_folder is not None:
             if not store_posterior_ltqs:
@@ -2742,13 +2742,13 @@ class Tree:
                             ltqs.append(nodeIndToNode[nodeInd].ltqs)
                             ltqsVars.append(nodeIndToNode[nodeInd].getLtqsVars())
                         else:
-                            if undo_rescale_by_var:
+                            if geneDiffusionScaling == 'geneVariances':
                                 # This means we have to undo the rescaling that was done before
                                 node_ltqs_post = nodeIndToNode[nodeInd].ltqsAIRoot * np.sqrt(variances)
                                 node_ltqsVars_post = nodeIndToNode[nodeInd].getLtqsVars(AIRoot=True) * variances
                             else:
-                                node_ltqs_post = nodeIndToNode[nodeInd].ltqsAIRoot
-                                node_ltqsVars_post = nodeIndToNode[nodeInd].getLtqsVars(AIRoot=True)
+                                node_ltqs_post = nodeIndToNode[nodeInd].ltqsAIRoot * np.sqrt(geneDiffusionScaling)
+                                node_ltqsVars_post = nodeIndToNode[nodeInd].getLtqsVars(AIRoot=True) * geneDiffusionScaling
                             ltqs.append(node_ltqs_post)
                             ltqsVars.append(node_ltqsVars_post)
                         # ltqsfile.write('\t'.join(np.char.mod('%.8e', nodeIndToNode[nodeInd].ltqs)) + '\n')

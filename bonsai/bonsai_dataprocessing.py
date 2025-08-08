@@ -22,6 +22,7 @@ class Metadata:
     loglik = None
     loglikVarCorr = None
     geneVariances = None
+    geneDiffusionScaling = None
     geneMeans = None
     processedDatafolder = None
     results_folder = None
@@ -37,15 +38,17 @@ class Metadata:
                "loglik = %r \n" \
                "loglikVarCorr = %r \n" \
                "geneVariances = %r \n" \
+               "geneDiffusionScaling = %r \n" \
                "geneMeans = %r \n" \
                "results_folder = %r \n" \
                "processedDatafolder = %r \n)" \
                % (self.pathToOrigData, self.dataset, self.nCells, self.nGenes, self.cellIds, self.geneIds, self.loglik,
-                  self.loglikVarCorr, self.geneVariances, self.geneMeans, self.results_folder, self.processedDatafolder)
+                  self.loglikVarCorr, self.geneVariances, self.geneDiffusionScaling, self.geneMeans,
+                  self.results_folder, self.processedDatafolder)
 
     def __init__(self, json_filepath=None, curr_metadata=None):
         attr_list = ['pathToOrigData', 'dataset', 'nCells', 'nGenes', 'cellIds', 'geneIds', 'loglik', 'loglikVarCorr',
-                     'geneVariances', 'geneMeans', 'processedDatafolder', 'results_folder']
+                     'geneVariances', 'geneDiffusionScaling', 'geneMeans', 'processedDatafolder', 'results_folder']
         if json_filepath is not None:
             self.from_json(json_filepath)
         else:
@@ -109,6 +112,7 @@ class OriginalData:
     ltqs = None
     ltqsVars = None
     geneVariances = None
+    geneDiffusionScaling = None
     geneMeans = None
     priorVariances = None
 
@@ -185,22 +189,31 @@ class SCData:
             self.metadata.geneVariances = np.ones(self.metadata.nGenes)
 
         # Scale diffusion by estimated gene variance.
-        if rescale_by_var and (originalData.ltqs is not None) and (originalData.ltqsVars is not None):
-            originalData.ltqsVars /= (originalData.geneVariances[:, None])
-            originalData.ltqs /= np.sqrt(originalData.geneVariances[:, None])
-            self.metadata.loglikVarCorr = - (self.metadata.nCells-1) * np.sum(
-                np.log(originalData.geneVariances))  # - self.metadata.nCells * self.metadata.nGenes * np.log(2* np.pi)
-        elif (originalData.ltqs is not None) and (originalData.ltqsVars is not None):
-            nVars = self.metadata.nGenes if self.metadata.nGenes is not None else originalData.geneVariances.shape
-            mean_var = np.mean(originalData.geneVariances)
-            originalData.geneVariances = np.ones(nVars) * mean_var
-            originalData.ltqsVars /= mean_var
-            originalData.ltqs /= np.sqrt(mean_var)
-            self.metadata.loglikVarCorr = - (self.metadata.nCells - 1) * nVars * np.log(mean_var)
+        if rescale_by_var:
+            if originalData.ltqs is not None:
+                originalData.ltqs /= np.sqrt(originalData.geneVariances[:, None])
+                if originalData.ltqsVars is not None:
+                    originalData.ltqsVars /= (originalData.geneVariances[:, None])
+                self.metadata.loglikVarCorr = - (self.metadata.nCells-1) * np.sum(
+                    np.log(originalData.geneVariances))  # - self.metadata.nCells * self.metadata.nGenes * np.log(2* np.pi)
+                originalData.geneDiffusionScaling = 'geneVariances'
+                self.metadata.geneDiffusionScaling = 'geneVariances'
+            # elif originalData.ltqs is not None:
+            #     originalData.ltqs /= np.sqrt(originalData.geneVariances[:, None])
+            #     originalData.geneDiffusionScaling = self.metadata.geneVariances
+            #     self.metadata.geneDiffusionScaling = self.metadata.geneVariances
+            #     self.metadata.loglikVarCorr = - (self.metadata.nCells - 1) * np.sum(
+            #         np.log(originalData.geneVariances))  #-self.metadata.nCells*self.metadata.nGenes * np.log(2* np.pi)
         else:
-            nVars = self.metadata.nGenes if self.metadata.nGenes is not None else originalData.geneVariances.shape
-            originalData.geneVariances = np.ones(nVars)
-            self.metadata.loglikVarCorr = 0.  # - self.metadata.nCells * self.metadata.nGenes * np.log(2 * np.pi)
+            if originalData.ltqs is not None:
+                nVars = self.metadata.nGenes if self.metadata.nGenes is not None else originalData.geneVariances.shape
+                mean_var = np.mean(originalData.geneVariances)
+                originalData.geneDiffusionScaling = mean_var
+                self.metadata.geneDiffusionScaling = originalData.geneDiffusionScaling
+                originalData.ltqs /= np.sqrt(mean_var)
+                if originalData.ltqsVars is not None:
+                    originalData.ltqsVars /= mean_var
+                self.metadata.loglikVarCorr = - (self.metadata.nCells - 1) * nVars * np.log(mean_var)
 
         if originalData.ltqs is not None:
             # Store data filtered by zscore
@@ -211,6 +224,7 @@ class SCData:
         bs_glob.nCells = self.metadata.nCells
         bs_glob.nGenes = self.metadata.nGenes
         bs_glob.geneVariances = self.metadata.geneVariances
+        bs_glob.geneDiffusionScaling = self.metadata.geneDiffusionScaling
         bs_glob.geneMeans = self.metadata.geneMeans
 
         # Update recursion limits so that very deep trees don't create errors
@@ -358,7 +372,7 @@ class SCData:
 
     # Used
     def storeTreeInFolder(self, treeFolder, with_coords=False, verbose=False, all_ranks=False, cleanup_tree=True,
-                          nwk=True, store_posterior_ltqs=False, ltqs_were_rescaled_by_var=True):
+                          nwk=True, store_posterior_ltqs=False):
         coords_folder = treeFolder if with_coords else None
         mpiRank = mpi_wrapper.get_process_rank()
         if cleanup_tree:
@@ -369,7 +383,7 @@ class SCData:
             Path(treeFolder).mkdir(parents=True, exist_ok=True)
             edgeList, distList, vertInfo = self.tree.getEdgeVertInfo(coords_folder=coords_folder, verbose=False,
                                                                      store_posterior_ltqs=store_posterior_ltqs,
-                                                                     undo_rescale_by_var=ltqs_were_rescaled_by_var,
+                                                                     geneDiffusionScaling=self.metadata.geneDiffusionScaling,
                                                                      variances=self.metadata.geneVariances)
 
             with open(os.path.join(treeFolder, 'edgeInfo.txt'), "w") as file:
@@ -2034,6 +2048,7 @@ def load_data_for_tree(scData, tree_folder, vertind_to_node, get_all_data=True, 
     bs_glob.nNodes = scData.tree.nNodes
     bs_glob.geneMeans = scData.metadata.geneMeans
     bs_glob.geneVariances = scData.metadata.geneVariances
+    bs_glob.geneDiffusionScaling = scData.metadata.geneDiffusionScaling
 
     # Try to read data in following order:
     # - see if there is data for all vertices stored where the tree is stored
