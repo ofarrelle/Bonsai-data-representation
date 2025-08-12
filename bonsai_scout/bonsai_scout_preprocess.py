@@ -183,8 +183,9 @@ if scData.tree.root.ltqsAIRoot is not None:
             ltqs[:, vert_ind] = node.ltqsAIRoot * np.sqrt(scData.metadata.geneVariances)
             ltqs_vars[:, vert_ind] = node.getLtqsVars(AIRoot=True) * scData.metadata.geneVariances
         else:
-            ltqs[:, vert_ind] = node.ltqsAIRoot
-            ltqs_vars[:, vert_ind] = node.getLtqsVars(AIRoot=True)
+            mean_var = np.mean(scData.metadata.geneVariances)
+            ltqs[:, vert_ind] = node.ltqsAIRoot * np.sqrt(mean_var)
+            ltqs_vars[:, vert_ind] = node.getLtqsVars(AIRoot=True) * mean_var
 else:
     ltqs = None
     ltqs_vars = None
