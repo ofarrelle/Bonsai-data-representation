@@ -380,7 +380,10 @@ class Bonvis_settings:
                     continue
                 annot_tuples.append((annot_alt, len(annot_info_alt.cats)))
             if len(annot_tuples) > 0:
-                sorted_annots = sorted(annot_tuples, key=lambda x: (not x[0].lower().startswith("annot_celltype"), x[1]))
+                # Select "cellTypeName" first, if not present, "Celltype", then the one with fewest categories
+                sorted_annots = sorted(annot_tuples, key=lambda x: (not x[0].lower().startswith("annot_celltypename"),
+                                                                    not x[0].lower().startswith("annot_celltype"),
+                                                                    x[1]))
                 possible_init_annots = [sorted_annots[0][0]]
         init_annot = possible_init_annots[0] if len(possible_init_annots) else self.celltype_info.annot_alts[0]
         self.set_annot(annot_label=init_annot)
