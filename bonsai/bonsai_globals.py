@@ -1,7 +1,6 @@
-globalVars = {'nCells', 'nGenes', 'nNodes', 'geneVariances', 'geneMeans', 'geneDiffusionScaling'}
+globalVars = {'nCells', 'nGenes', 'nNodes', 'geneVariances', 'geneDiffusionScaling'}
 nCells = None
 nGenes = None
 nNodes = None
 geneVariances = None
-geneMeans = None
 geneDiffusionScaling = None

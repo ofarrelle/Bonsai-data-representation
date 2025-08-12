@@ -23,7 +23,6 @@ class Metadata:
     loglikVarCorr = None
     geneVariances = None
     geneDiffusionScaling = None
-    geneMeans = None
     processedDatafolder = None
     results_folder = None
 
@@ -39,16 +38,15 @@ class Metadata:
                "loglikVarCorr = %r \n" \
                "geneVariances = %r \n" \
                "geneDiffusionScaling = %r \n" \
-               "geneMeans = %r \n" \
                "results_folder = %r \n" \
                "processedDatafolder = %r \n)" \
                % (self.pathToOrigData, self.dataset, self.nCells, self.nGenes, self.cellIds, self.geneIds, self.loglik,
-                  self.loglikVarCorr, self.geneVariances, self.geneDiffusionScaling, self.geneMeans,
+                  self.loglikVarCorr, self.geneVariances, self.geneDiffusionScaling,
                   self.results_folder, self.processedDatafolder)
 
     def __init__(self, json_filepath=None, curr_metadata=None):
         attr_list = ['pathToOrigData', 'dataset', 'nCells', 'nGenes', 'cellIds', 'geneIds', 'loglik', 'loglikVarCorr',
-                     'geneVariances', 'geneDiffusionScaling', 'geneMeans', 'processedDatafolder', 'results_folder']
+                     'geneVariances', 'geneDiffusionScaling', 'processedDatafolder', 'results_folder']
         if json_filepath is not None:
             self.from_json(json_filepath)
         else:
@@ -63,7 +61,7 @@ class Metadata:
         self_dict = self.__dict__
         new_dict = {}
         for self_label, self_val in self_dict.items():
-            if self_label in ['geneVariances', 'geneMeans'] and (self_val is not None):
+            if self_label in ['geneVariances'] and (self_val is not None):
                 new_dict[self_label] = self_val.tolist()
             elif hasattr(self_val, 'dtype'):
                 if self_val.dtype == 'float64':
@@ -78,7 +76,7 @@ class Metadata:
 
     def from_dict(self, metadata_dict):
         for md_label, md_val in metadata_dict.items():
-            if md_label in ['geneVariances', 'geneMeans'] and (md_val is not None):
+            if md_label in ['geneVariances'] and (md_val is not None):
                 setattr(self, md_label, np.array(md_val))
             elif isinstance(md_val, float):
                 setattr(self, md_label, np.float64(md_val))
@@ -102,8 +100,6 @@ class Metadata:
             self.geneIds = [self.geneIds[ind] for ind in genes_to_keep]
             if self.geneVariances is not None:
                 self.geneVariances = self.geneVariances[genes_to_keep]
-            if self.geneMeans is not None:
-                self.geneMeans = self.geneMeans[genes_to_keep]
             self.nGenes = new_nGenes
 
 
@@ -113,7 +109,6 @@ class OriginalData:
     ltqsVars = None
     geneVariances = None
     geneDiffusionScaling = None
-    geneMeans = None
     priorVariances = None
 
     def __repr__(self):
@@ -181,10 +176,6 @@ class SCData:
         #     self.unscaled = copy.deepcopy(originalData)
 
         self.metadata.geneVariances = originalData.geneVariances
-        self.metadata.geneMeans = originalData.geneMeans
-
-        if self.metadata.geneMeans is None:
-            self.metadata.geneMeans = np.zeros(self.metadata.nGenes)
         if self.metadata.geneVariances is None:
             self.metadata.geneVariances = np.ones(self.metadata.nGenes)
 
@@ -225,7 +216,6 @@ class SCData:
         bs_glob.nGenes = self.metadata.nGenes
         bs_glob.geneVariances = self.metadata.geneVariances
         bs_glob.geneDiffusionScaling = self.metadata.geneDiffusionScaling
-        bs_glob.geneMeans = self.metadata.geneMeans
 
         # Update recursion limits so that very deep trees don't create errors
         set_recursion_limits(int(2 * bs_glob.nCells))
@@ -1127,7 +1117,7 @@ class SCData:
                 filenameStds = None
 
         try:
-            originalData.ltqs, originalData.ltqsVars, originalData.geneVariances, originalData.geneMeans, \
+            originalData.ltqs, originalData.ltqsVars, originalData.geneVariances \
             self.metadata.nCells, \
             self.metadata.nGenes, genes_to_keep, ltqStdsFound, \
             n_genes_orig = read_and_filter(self.data_path(), filenameMeans, filenameStds, sanityOutput,
@@ -2046,7 +2036,6 @@ def load_data_for_tree(scData, tree_folder, vertind_to_node, get_all_data=True, 
     bs_glob.nGenes = scData.metadata.nGenes
     bs_glob.nCells = scData.metadata.nCells
     bs_glob.nNodes = scData.tree.nNodes
-    bs_glob.geneMeans = scData.metadata.geneMeans
     bs_glob.geneVariances = scData.metadata.geneVariances
     bs_glob.geneDiffusionScaling = scData.metadata.geneDiffusionScaling
 
@@ -2290,7 +2279,6 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
     tmp_means = []
     tmp_vars = []
     tmp_gene_vars = []
-    tmp_gene_means = []
     print_ind = 1000
 
     # Define cutoff for how close the variances on LTQs can be to the true variances before throwing out a gene.
@@ -2424,7 +2412,6 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
                             tmp_means.append(means)
                             tmp_vars.append(vars)
                             tmp_gene_vars.append(gene_var)
-                            tmp_gene_means.append(gene_means[row_ind])
                             genes_to_keep.append(row_ind)
                         if (row_ind - myTasks[0]) > print_ind:
                             print_ind *= 2
@@ -2469,7 +2456,6 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
                             tmp_vars.append(vars)
                             genes_to_keep.append(row_ind)
                             tmp_gene_vars.append(inferred_gene_var)
-                            tmp_gene_means.append(inferred_gene_mean)
                         if (row_ind - myTasks[0]) == print_ind:
                             print_ind *= 2
                             mp_print(
@@ -2486,7 +2472,6 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
             ltqs = np.vstack(tmp_means)
             genes_to_keep = np.array(genes_to_keep)
             gene_vars = np.array(tmp_gene_vars)
-            gene_means = np.array(tmp_gene_means)
     else:
         # In this case, we do not read in standard deviations, all genes are kept.
         ltqStdsFound = False
@@ -2507,7 +2492,6 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
                     tmp_means.append(means)
                     genes_to_keep.append(row_ind)
                     tmp_gene_vars.append(inferred_gene_var)
-                    tmp_gene_means.append(0)
                 if (row_ind - myTasks[0]) == print_ind:
                     print_ind *= 2
                     mp_print("Processing data for the the %d-th feature out of %d, this took %.2f seconds." % (
@@ -2523,11 +2507,10 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
             nGenes = ltqs.shape[0]
             genes_to_keep = np.array(genes_to_keep)
             gene_vars = np.array(tmp_gene_vars)
-            gene_means = np.array(tmp_gene_means)
 
     if mpiInfo.size > 1:
         # Make all processes communicate the read-in data with process 0.
-        ltqsInfo = np.concatenate((genes_to_keep[:, None], gene_vars[:, None], gene_means[:, None], ltqs, ltqsVars), axis=1)
+        ltqsInfo = np.concatenate((genes_to_keep[:, None], gene_vars[:, None], ltqs, ltqsVars), axis=1)
         mp_print("Size of ltqsInfo that is communicated with other processes: ", ltqsInfo.shape, ONLY_RANK=0)
         ltqsInfo = mpi_wrapper.GatherNpUnknownSize(ltqsInfo, root=0)
         if mpiInfo.rank == 0:
@@ -2542,7 +2525,7 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
             # Gather all information from all processes, this is now a matrix with a gene on each row, and then blocks
             # with, respectively, gene_inds, means, variances
             ltqsInfo = np.vstack(ltqsInfo)
-            genes_to_keep, gene_vars, gene_means, ltqs, ltqsVars = np.array_split(ltqsInfo, indices_or_sections=[1, 2, 3, nCells + 3],
+            genes_to_keep, gene_vars, ltqs, ltqsVars = np.array_split(ltqsInfo, indices_or_sections=[1, 2, nCells + 2],
                                                                       axis=1)
             continueYN = True
             mpi_wrapper.bcast(continueYN, root=0)
@@ -2562,16 +2545,15 @@ def read_and_filter(data_folder, meansfile, stdsfile, sanityOutput, zscoreCutoff
         del ltqs
         del ltqsVars
         gc.collect()
-        return None, None, None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None
     genes_to_keep = genes_to_keep.flatten().astype(dtype=int)
     gene_vars = gene_vars.flatten()
-    gene_means = gene_means.flatten()
     nGenes = ltqs.shape[0]
     if verbose:
         mp_print("Processed %d genes in %.2f seconds, found %d cells. At zscore-cutoff of %f, %d genes were kept." % (
             nGenesOrig, time.time() - start, nCells, zscoreCutoff, nGenes))
 
-    return ltqs, ltqsVars, gene_vars, gene_means, nCells, nGenes, genes_to_keep, ltqStdsFound, nGenesOrig
+    return ltqs, ltqsVars, gene_vars, nCells, nGenes, genes_to_keep, ltqStdsFound, nGenesOrig
 
 
 def storeData(metadata, ltqs, ltqsVars, verbose=False):
