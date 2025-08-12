@@ -214,8 +214,6 @@ class SCData:
         # Some variables are nice to have access to from all functions
         bs_glob.nCells = self.metadata.nCells
         bs_glob.nGenes = self.metadata.nGenes
-        bs_glob.geneVariances = self.metadata.geneVariances
-        bs_glob.geneDiffusionScaling = self.metadata.geneDiffusionScaling
 
         # Update recursion limits so that very deep trees don't create errors
         set_recursion_limits(int(2 * bs_glob.nCells))
@@ -1117,7 +1115,7 @@ class SCData:
                 filenameStds = None
 
         try:
-            originalData.ltqs, originalData.ltqsVars, originalData.geneVariances \
+            originalData.ltqs, originalData.ltqsVars, originalData.geneVariances, \
             self.metadata.nCells, \
             self.metadata.nGenes, genes_to_keep, ltqStdsFound, \
             n_genes_orig = read_and_filter(self.data_path(), filenameMeans, filenameStds, sanityOutput,
@@ -2036,8 +2034,6 @@ def load_data_for_tree(scData, tree_folder, vertind_to_node, get_all_data=True, 
     bs_glob.nGenes = scData.metadata.nGenes
     bs_glob.nCells = scData.metadata.nCells
     bs_glob.nNodes = scData.tree.nNodes
-    bs_glob.geneVariances = scData.metadata.geneVariances
-    bs_glob.geneDiffusionScaling = scData.metadata.geneDiffusionScaling
 
     # Try to read data in following order:
     # - see if there is data for all vertices stored where the tree is stored
