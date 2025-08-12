@@ -240,7 +240,7 @@ for ind_dim, n_cells_per_clst in enumerate(n_cells_per_clst_list):
                                                   allow_pickle=False)
         else:
             phate_projected = {}
-            phate_projected['all'] = fit_phate(delta_gc_true)
+            phate_projected['all'] = fit_phate(delta_gc)
             np.save(os.path.join(args.output_folder, 'intermediate_files', 'phate.npy'),
                     phate_projected['all'],
                     allow_pickle=False)
