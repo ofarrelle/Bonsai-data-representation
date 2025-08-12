@@ -9,6 +9,7 @@ from scipy.sparse.csgraph import shortest_path
 from scipy.sparse import csr_matrix
 from scipy.stats import rankdata
 import logging
+import phate
 
 FORMAT = '%(asctime)s %(name)s %(funcName)s %(message)s'
 log_level = logging.WARNING
@@ -57,6 +58,19 @@ def do_pca(data, n_comps_list=[50]):
         proj_data = transformed_data[:, :n_comps].T
         pca_projected[n_comps] = proj_data
     return pca_projected
+
+
+def fit_phate(data):
+    """
+
+    :param data: should be a numpy array with features (genes) as rows, observations (cells) as columns
+    :return:
+    """
+    data_T = data.T
+    phate_op = phate.PHATE()
+    data_phate = phate_op.fit_transform(data_T)
+
+    return data_phate[:, :2].T
 
 
 def fit_umap(data, random_state=42, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean',
