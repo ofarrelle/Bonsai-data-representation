@@ -26,7 +26,7 @@ os.chdir(parent_dir)
 
 from bonsai.bonsai_helpers import str2bool, find_latest_tree_folder
 from knn_recall_helpers import get_pdists_on_tree, Dataset, compare_pdists_to_truth_per_cell, \
-    compare_pdists_to_truth_per_cell_adjusted, compare_nearest_neighbours_to_truth, do_pca, fit_umap
+    compare_pdists_to_truth_per_cell_adjusted, compare_nearest_neighbours_to_truth, do_pca, fit_umap, fit_phate
 
 parser = ArgumentParser(
     description='Runs Bonsai on several simulated datasets.')
@@ -228,6 +228,23 @@ for ind_dim, n_cells_per_clst in enumerate(n_cells_per_clst_list):
                         umap_projected[n_comps],
                         allow_pickle=False)
 
+        # Perform PHATE.
+        all_phate_files = [os.path.basename(filepath) for filepath in
+                          Path(os.path.join(args.output_folder, 'intermediate_files')).glob('phate*.npy')]
+        all_phate_files = [filepath for filepath in all_phate_files if 'pdists' not in filepath]
+        if (not RECALCULATE) and len(all_phate_files):
+            phate_projected = {}
+            for phate_file in all_phate_files:
+                # n_comps = int(phate_file.split('phate_')[1].split('.npy')[0])
+                phate_projected['all'] = np.load(os.path.join(args.output_folder, 'intermediate_files', phate_file),
+                                                  allow_pickle=False)
+        else:
+            phate_projected = {}
+            phate_projected['all'] = fit_phate(delta_gc_true)
+            np.save(os.path.join(args.output_folder, 'intermediate_files', 'phate.npy'),
+                    phate_projected['all'],
+                    allow_pickle=False)
+
         # Calculate pairwise distances for 2D-PCA, UMAP
         all_pca_dist_files = [os.path.basename(filepath) for filepath in
                               Path(os.path.join(args.output_folder, 'intermediate_files')).glob('pca_*_pdists.npy')]
@@ -248,6 +265,14 @@ for ind_dim, n_cells_per_clst in enumerate(n_cells_per_clst_list):
                 np.save(os.path.join(args.output_folder, 'intermediate_files', 'umap_{}_pdists.npy'.format(n_comps)),
                         umap_dists, allow_pickle=False)
 
+        all_phate_dist_files = [os.path.basename(filepath) for filepath in
+                               Path(os.path.join(args.output_folder, 'intermediate_files')).glob('phate_pdists.npy')]
+        if RECALCULATE or (not len(all_phate_dist_files)):
+            for n_comps, phate_proj in phate_projected.items():
+                phate_dists = distance.pdist(phate_proj.T, metric='sqeuclidean') / 2
+                np.save(os.path.join(args.output_folder, 'intermediate_files', 'phate_pdists.npy'),
+                        phate_dists, allow_pickle=False)
+
     if DO_OTHER_TOOLS:
         alldistfiles = list(Path(os.path.join(args.output_folder, 'intermediate_files')).glob('*_pdists.npy'))
     else:
@@ -261,7 +286,7 @@ for ind_dim, n_cells_per_clst in enumerate(n_cells_per_clst_list):
         data_type = os.path.basename(distfile).split("_pdists")[0]
         data_id = data_type + ' {}_dims'.format(num_dims)
         datasets.append(
-            Dataset(pdist_file=distfile, data_type=data_type, data_id=data_id, color_types=['sanity', 'bonsai', 'pca', 'umap']))
+            Dataset(pdist_file=distfile, data_type=data_type, data_id=data_id, color_types=['sanity', 'bonsai', 'pca', 'umap', 'phate']))
         datasets[-1].n_cells_per_clst = n_cells_per_clst
         if data_type[:10] != 'delta_true':
             dist_objcts.append(datasets[-1])
