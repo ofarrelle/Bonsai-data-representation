@@ -22,6 +22,7 @@ class Metadata:
     loglik = None
     loglikVarCorr = None
     geneVariances = None
+    geneDiffusionScaling = None
     processedDatafolder = None
     results_folder = None
 
@@ -36,14 +37,16 @@ class Metadata:
                "loglik = %r \n" \
                "loglikVarCorr = %r \n" \
                "geneVariances = %r \n" \
+               "geneDiffusionScaling = %r \n" \
                "results_folder = %r \n" \
                "processedDatafolder = %r \n)" \
                % (self.pathToOrigData, self.dataset, self.nCells, self.nGenes, self.cellIds, self.geneIds, self.loglik,
-                  self.loglikVarCorr, self.geneVariances, self.results_folder, self.processedDatafolder)
+                  self.loglikVarCorr, self.geneVariances, self.geneDiffusionScaling,
+                  self.results_folder, self.processedDatafolder)
 
     def __init__(self, json_filepath=None, curr_metadata=None):
         attr_list = ['pathToOrigData', 'dataset', 'nCells', 'nGenes', 'cellIds', 'geneIds', 'loglik', 'loglikVarCorr',
-                     'geneVariances', 'processedDatafolder', 'results_folder']
+                     'geneVariances', 'geneDiffusionScaling', 'processedDatafolder', 'results_folder']
         if json_filepath is not None:
             self.from_json(json_filepath)
         else:
@@ -58,7 +61,7 @@ class Metadata:
         self_dict = self.__dict__
         new_dict = {}
         for self_label, self_val in self_dict.items():
-            if self_label == 'geneVariances' and (self_val is not None):
+            if self_label in ['geneVariances'] and (self_val is not None):
                 new_dict[self_label] = self_val.tolist()
             elif hasattr(self_val, 'dtype'):
                 if self_val.dtype == 'float64':
@@ -73,7 +76,7 @@ class Metadata:
 
     def from_dict(self, metadata_dict):
         for md_label, md_val in metadata_dict.items():
-            if md_label == 'geneVariances' and (md_val is not None):
+            if md_label in ['geneVariances'] and (md_val is not None):
                 setattr(self, md_label, np.array(md_val))
             elif isinstance(md_val, float):
                 setattr(self, md_label, np.float64(md_val))
@@ -105,6 +108,7 @@ class OriginalData:
     ltqs = None
     ltqsVars = None
     geneVariances = None
+    geneDiffusionScaling = None
     priorVariances = None
 
     def __repr__(self):
@@ -172,23 +176,35 @@ class SCData:
         #     self.unscaled = copy.deepcopy(originalData)
 
         self.metadata.geneVariances = originalData.geneVariances
+        if self.metadata.geneVariances is None:
+            self.metadata.geneVariances = np.ones(self.metadata.nGenes)
+
         # Scale diffusion by estimated gene variance.
-        if rescale_by_var and (originalData.ltqs is not None) and (originalData.ltqsVars is not None):
-            originalData.ltqsVars /= (originalData.geneVariances[:, None])
-            originalData.ltqs /= np.sqrt(originalData.geneVariances[:, None])
-            self.metadata.loglikVarCorr = - (self.metadata.nCells-1) * np.sum(
-                np.log(originalData.geneVariances))  # - self.metadata.nCells * self.metadata.nGenes * np.log(2* np.pi)
-        elif (originalData.ltqs is not None) and (originalData.ltqsVars is not None):
-            nVars = self.metadata.nGenes if self.metadata.nGenes is not None else originalData.geneVariances.shape
-            mean_var = np.mean(originalData.geneVariances)
-            originalData.geneVariances = np.ones(nVars) * mean_var
-            originalData.ltqsVars /= mean_var
-            originalData.ltqs /= np.sqrt(mean_var)
-            self.metadata.loglikVarCorr = - (self.metadata.nCells - 1) * nVars * np.log(mean_var)
+        if rescale_by_var:
+            if originalData.ltqs is not None:
+                originalData.ltqs /= np.sqrt(originalData.geneVariances[:, None])
+                if originalData.ltqsVars is not None:
+                    originalData.ltqsVars /= (originalData.geneVariances[:, None])
+                self.metadata.loglikVarCorr = - (self.metadata.nCells-1) * np.sum(
+                    np.log(originalData.geneVariances))  # - self.metadata.nCells * self.metadata.nGenes * np.log(2* np.pi)
+                originalData.geneDiffusionScaling = 'geneVariances'
+                self.metadata.geneDiffusionScaling = 'geneVariances'
+            # elif originalData.ltqs is not None:
+            #     originalData.ltqs /= np.sqrt(originalData.geneVariances[:, None])
+            #     originalData.geneDiffusionScaling = self.metadata.geneVariances
+            #     self.metadata.geneDiffusionScaling = self.metadata.geneVariances
+            #     self.metadata.loglikVarCorr = - (self.metadata.nCells - 1) * np.sum(
+            #         np.log(originalData.geneVariances))  #-self.metadata.nCells*self.metadata.nGenes * np.log(2* np.pi)
         else:
-            nVars = self.metadata.nGenes if self.metadata.nGenes is not None else originalData.geneVariances.shape
-            originalData.geneVariances = np.ones(nVars)
-            self.metadata.loglikVarCorr = 0.  # - self.metadata.nCells * self.metadata.nGenes * np.log(2 * np.pi)
+            if originalData.ltqs is not None:
+                nVars = self.metadata.nGenes if self.metadata.nGenes is not None else originalData.geneVariances.shape
+                mean_var = np.mean(originalData.geneVariances)
+                originalData.geneDiffusionScaling = mean_var
+                self.metadata.geneDiffusionScaling = originalData.geneDiffusionScaling
+                originalData.ltqs /= np.sqrt(mean_var)
+                if originalData.ltqsVars is not None:
+                    originalData.ltqsVars /= mean_var
+                self.metadata.loglikVarCorr = - (self.metadata.nCells - 1) * nVars * np.log(mean_var)
 
         if originalData.ltqs is not None:
             # Store data filtered by zscore
@@ -344,7 +360,7 @@ class SCData:
 
     # Used
     def storeTreeInFolder(self, treeFolder, with_coords=False, verbose=False, all_ranks=False, cleanup_tree=True,
-                          nwk=True, store_posterior_ltqs=False, ltqs_were_rescaled_by_var=True):
+                          nwk=True, store_posterior_ltqs=False):
         coords_folder = treeFolder if with_coords else None
         mpiRank = mpi_wrapper.get_process_rank()
         if cleanup_tree:
@@ -355,7 +371,7 @@ class SCData:
             Path(treeFolder).mkdir(parents=True, exist_ok=True)
             edgeList, distList, vertInfo = self.tree.getEdgeVertInfo(coords_folder=coords_folder, verbose=False,
                                                                      store_posterior_ltqs=store_posterior_ltqs,
-                                                                     undo_rescale_by_var=ltqs_were_rescaled_by_var,
+                                                                     geneDiffusionScaling=self.metadata.geneDiffusionScaling,
                                                                      variances=self.metadata.geneVariances)
 
             with open(os.path.join(treeFolder, 'edgeInfo.txt'), "w") as file:
@@ -1099,7 +1115,8 @@ class SCData:
                 filenameStds = None
 
         try:
-            originalData.ltqs, originalData.ltqsVars, originalData.geneVariances, self.metadata.nCells, \
+            originalData.ltqs, originalData.ltqsVars, originalData.geneVariances, \
+            self.metadata.nCells, \
             self.metadata.nGenes, genes_to_keep, ltqStdsFound, \
             n_genes_orig = read_and_filter(self.data_path(), filenameMeans, filenameStds, sanityOutput,
                                            zscoreCutoff, mpiInfo, verbose=verbose)

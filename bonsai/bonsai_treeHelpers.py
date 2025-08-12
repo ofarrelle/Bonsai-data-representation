@@ -792,6 +792,29 @@ class TreeNode:
             tChildren[cInd] = child.tParent
         return ltqsChildren, ltqsVarsChildren, tChildren
 
+    def get_posterior_info_children(self, xrAIRoot, WRoot):
+        nChildren = len(self.childNodes)
+        ltqsChildren = np.zeros((bs_glob.nGenes, nChildren))
+        WChildren = np.zeros((bs_glob.nGenes, nChildren))
+        tChildren = np.zeros(nChildren)
+        # nodeIndChilds = np.zeros(nChildren + 1, dtype=int)
+        for cInd, child in enumerate(self.childNodes):
+            ltqsChildren[:, cInd] = child.ltqs
+            WChildren[:, cInd] = child.getW()
+            tChildren[cInd] = child.tParent
+
+        post_ltqsCh, _ = getLtqsAsIfRoot_vectorized(ltqsChildren, WChildren, tChildren, xrAIRoot, WRoot)
+        # Get posterior best guess for coordinates by integrating out everything but the root
+        # # TODO: Check if this for-loop can be vectorized
+        # post_ltqsCh = np.zeros_like(ltqsCh)
+        # WCh = 1 / ltqsVarsCh
+        # WRoot = 1/xrVarsAIRoot
+        # for ind in range(len(self.childNodes)):
+        #     post_ltqsCh[:, ind], _ = getLtqsAsIfRoot(ltqsCh[:, ind], WCh[:, ind], tChildren[ind], xrAIRoot, WRoot)
+        # # We center the ltq-information around the root
+        # post_ltqsCh -= xrAIRoot[:, None]
+        return post_ltqsCh
+
     def addClosenessNNN(self, dist, src=np.nan):
         dist += 1
         if not self.isRoot:
@@ -1519,7 +1542,7 @@ class TreeNode:
             remove_folder(runConfigs['mem_friendly_folder'])
         return changedSomething
 
-    def getNewPairs(self, xrAsIfRoot_g, runConfigs, NNInfo=None, newAnc=None, verbose=False,
+    def getNewPairs(self, xrAsIfRoot_g, xrVarsAsIfRoot_g, runConfigs, NNInfo=None, newAnc=None, verbose=False,
                     UBInfo=None, specialChild=None, oldPairs=None, chInfo=None, del_node_inds=[]):
         if not runConfigs['useUBNow']:
             # This means we need to recalculate UBs for all pairs
@@ -1534,7 +1557,7 @@ class TreeNode:
                 # This means we will use nearest-neighbours
                 if runConfigs['getNewNN']:
                     # In this case we calculate new NNs
-                    new_pairs, NNInfo = self.getNNPairs(xrAsIfRoot_g, NNInfo, runConfigs['kNN'], verbose=verbose)
+                    new_pairs, NNInfo = self.getNNPairs(xrAsIfRoot_g, xrVarsAsIfRoot_g, NNInfo, runConfigs['kNN'], verbose=verbose)
                     runConfigs['getNewNN'] = False
                     NNInfo['NNcounter'] = 0
                 else:
@@ -1547,7 +1570,8 @@ class TreeNode:
                     else:
                         # In this case we should add NN-pairs involving the ancestor
                         new_pairs, oldPairsList = self.get_new_nn_pairs(newAnc, NNInfo, runConfigs, UBInfo=UBInfo,
-                                                                        old_pairs_list=[oldPairs])
+                                                                        old_pairs_list=[oldPairs], xrAIRoot=xrAsIfRoot_g,
+                                                                         xrVarsAIRoot=xrVarsAsIfRoot_g)
                         oldPairs = oldPairsList[0]
                         # index, nns = getApproxNNs(newAnc.ltqs[:, None], index=NNInfo['index'],
                         #                           k=2 * runConfigs['kNN'],
@@ -1582,7 +1606,7 @@ class TreeNode:
                 else:
                     # so we re-use UBs, recalculate NNs
                     # First get all NNs
-                    new_pairs, NNInfo = self.getNNPairs(xrAsIfRoot_g, NNInfo, runConfigs['kNN'], verbose=verbose)
+                    new_pairs, NNInfo = self.getNNPairs(xrAsIfRoot_g, xrVarsAsIfRoot_g, NNInfo, runConfigs['kNN'], verbose=verbose)
                     runConfigs['getNewNN'] = False
                     NNInfo['NNcounter'] = 0
                     # Then we test which UBs were already in the UB-pairs and which ones are new
@@ -1612,12 +1636,12 @@ class TreeNode:
                                  newAnc.nodeInd != child.nodeInd]
                     old_pairs = [*UBInfo['pairs']]
                 elif not runConfigs['getNewNN']:
-                    new_pairs = self.get_new_nn_pairs(newAnc, NNInfo, runConfigs, UBInfo=UBInfo)
+                    new_pairs = self.get_new_nn_pairs(newAnc, NNInfo, runConfigs, UBInfo=UBInfo, xrAIRoot=xrAsIfRoot_g, xrVarsAIRoot=xrVarsAsIfRoot_g)
                     old_pairs = list(map(tuple, UBInfo['pairs']))
                 else:
                     # so we re-use UBs, recalculate NNs
                     # First get all NNs
-                    new_pairs, NNInfo = self.getNNPairs(xrAsIfRoot_g, NNInfo, runConfigs['kNN'], verbose=verbose)
+                    new_pairs, NNInfo = self.getNNPairs(xrAsIfRoot_g, xrVarsAsIfRoot_g, NNInfo, runConfigs['kNN'], verbose=verbose)
                     runConfigs['getNewNN'] = False
                     NNInfo['NNcounter'] = 0
 
@@ -1668,7 +1692,8 @@ class TreeNode:
                              DEBUG=True)
                     child_ind = chInfo['nodeIndToChildInd'][few_nn_node_ind]
                     new_nn_pairs, pairs_list = self.get_new_nn_pairs(self.childNodes[child_ind], NNInfo, runConfigs,
-                                                                     UBInfo=UBInfo,
+                                                                     UBInfo=UBInfo, xrAIRoot=xrAsIfRoot_g,
+                                                                     xrVarsAIRoot=xrVarsAsIfRoot_g,
                                                                      old_pairs_list=[new_pairs, old_pairs])
                     new_pairs = new_nn_pairs + pairs_list[0]
                     old_pairs = pairs_list[1]
@@ -1677,7 +1702,8 @@ class TreeNode:
                         new_nn_pairs, pairs_list = self.get_new_nn_pairs(self.childNodes[child_ind], NNInfo, runConfigs,
                                                                          old_pairs_list=[new_pairs],
                                                                          update_nn_index=True,
-                                                                         xrAIRoot=xrAsIfRoot_g)
+                                                                         xrAIRoot=xrAsIfRoot_g,
+                                                                         xrVarsAIRoot=xrVarsAsIfRoot_g)
                         new_pairs = new_nn_pairs + pairs_list[0]
 
                 else:
@@ -1806,7 +1832,7 @@ class TreeNode:
         # of pairs, in the order that we want to consider them.
         runConfigs['obtainedNewPairs'] = runConfigs['getNewUB'] or runConfigs['getNewNN']
         start_new_pairs = time.time()
-        pairs, nPairs, nNewPairs = self.getNewPairs(xrAsIfRoot_g, runConfigs, NNInfo=NNInfo,
+        pairs, nPairs, nNewPairs = self.getNewPairs(xrAsIfRoot_g, 1/WAsIfRoot_g, runConfigs, NNInfo=NNInfo,
                                                     newAnc=newAnc, verbose=verbose, oldPairs=oldPairs,
                                                     UBInfo=UBInfo, specialChild=specialChild, chInfo=chInfo,
                                                     del_node_inds=del_node_inds)
@@ -1984,21 +2010,29 @@ class TreeNode:
         mpi_wrapper.barrier()
         return infoTuple, tChildren, coordsTuple
 
-    def getNNPairs(self, xrAIRoot, NNInfo, kNN, verbose=False):
+    def getNNPairs(self, xrAIRoot, xrVarsAIRoot, NNInfo, kNN, verbose=False):
         start = time.time()
-        # We first gather all ltq-information about the children
-        ltqsCh, _, _ = self.getInfoChildren()
 
+        # We first gather all ltq-information about the children
+        post_ltqsCh = self.get_posterior_info_children(xrAIRoot, 1/xrVarsAIRoot)
         # We center the ltq-information around the root
-        ltqsCh -= xrAIRoot[:, None]
+        post_ltqsCh -= xrAIRoot[:, None]
         NNInfo['subtracted_mean'] = xrAIRoot
+
+        # # (Re-)introduce the Gaussian prior to get posterior estimates for the child-positions
+        # post_ltqsCh_old = lik_to_post_coords(ltqsCh, ltqsVarsCh)
+        # # Also get the posterior position for the root
+        # post_xrAIRoot_old = lik_to_post_coords(xrAIRoot, xrVarsAIRoot)
+        # # We center the ltq-information around the root
+        # post_ltqsCh_old -= post_xrAIRoot_old[:, None]
+
         # We ask for the nearest neighbours
         nodeInds = [child.nodeInd for child in self.childNodes]
         # TODO: Check how to get approxNNs beyond the brute-force sklearn one
         # Instead of taking cosine metric, we can also normalize the vectors and use squared-euclidean
-        norms = np.linalg.norm(ltqsCh, axis=0)
-        np.divide(ltqsCh, norms, out=ltqsCh)
-        index, nns = getApproxNNs(ltqsCh, index=None, k=kNN + 1, n_bits_factor=100, metric='sqeuclidean',
+        norms = np.linalg.norm(post_ltqsCh, axis=0)
+        np.divide(post_ltqsCh, norms, out=post_ltqsCh)
+        index, nns = getApproxNNs(post_ltqsCh, index=None, k=kNN + 1, n_bits_factor=100, metric='sqeuclidean',
                                   pointsIds=nodeInds, addPoints=True, th1=1e9, th2=1e9)
         nns = np.array(nodeInds)[nns]
         # Create unique set of all pairs with at least one nn-connection
@@ -2030,9 +2064,10 @@ class TreeNode:
         return pairs, NNInfo
 
     def get_new_nn_pairs(self, new_node, NNInfo, runConfigs, UBInfo=None, old_pairs_list=None, update_nn_index=False,
-                         xrAIRoot=None):
+                         xrAIRoot=None, xrVarsAIRoot=None):
         if UBInfo is not None:
-            # TODO: Check if this is necessary: # In this case also delete old UB-information on the "new_node", since we're going to calculate that again.
+            # TODO: Check if this is necessary: # In this case also delete old UB-information on the "new_node",
+            #  since we're going to calculate that again.
             to_be_deleted = np.where(UBInfo['pairs'] == new_node.nodeInd)[0]
             UBInfo['pairs'] = np.delete(UBInfo['pairs'], to_be_deleted, axis=0)
             UBInfo['UBs'] = np.delete(UBInfo['UBs'], to_be_deleted)
@@ -2043,34 +2078,34 @@ class TreeNode:
                 old_pairs_list[ind_pairs] = [old_pair for old_pair in old_pairs if new_node_ind not in old_pair]
         # Here, we should just get NN-pairs with the new ancestor. Take twice as many neighbours as for the
         # other nodes to compensate for no other nodes adding connections to ancestor
-        if not update_nn_index:
-            centered_query = (new_node.ltqs - NNInfo['subtracted_mean'])[:, None]
-            normalized_query = centered_query / np.linalg.norm(centered_query)
-            index, nns = getApproxNNs(normalized_query, index=NNInfo['index'],
-                                      k=20 * runConfigs['kNN'], pointsIds=[new_node.nodeInd], addPoints=False)
-        else:
-            # We gather information about the current children of the root
-            ltqsCh, _, _ = self.getInfoChildren()
+        if update_nn_index:
+            # We first gather all ltq-information about the children
+            post_ltqsCh = self.get_posterior_info_children(xrAIRoot, 1 / xrVarsAIRoot)
             # We center the ltq-information around the root
-            ltqsCh -= xrAIRoot[:, None]
+            post_ltqsCh -= xrAIRoot[:, None]
             NNInfo['subtracted_mean'] = xrAIRoot
 
             # Instead of taking cosine metric, we can also normalize the vectors and use squared-euclidean
-            norms = np.linalg.norm(ltqsCh, axis=0)
-            np.divide(ltqsCh, norms, out=ltqsCh)
+            norms = np.linalg.norm(post_ltqsCh, axis=0)
+            np.divide(post_ltqsCh, norms, out=post_ltqsCh)
 
-            # We ask for the nearest neighbours
+            # We update the index for the nearest neighbours
             nodeInds = [child.nodeInd for child in self.childNodes]
-            pointsT = ltqsCh.T
+            pointsT = post_ltqsCh.T
             NNInfo['index'].fit(pointsT)
             NNInfo['index'].IDs = nodeInds
-
-            centered_query = (new_node.ltqs - NNInfo['subtracted_mean'])[:, None]
-            normalized_query = centered_query / np.linalg.norm(centered_query)
-
-            index, nns = getApproxNNs(normalized_query, index=NNInfo['index'],
-                                      k=20 * runConfigs['kNN'], pointsIds=[new_node.nodeInd], addPoints=False)
             NNInfo['leafToChild'] = {nodeInd: nodeInd for nodeInd in nodeInds}
+
+        # Get the posterior coordinates for the new node
+        # post_ltqs = self.get_posterior_info_children(xrAIRoot, 1 / xrVarsAIRoot)
+        post_ltqs, _ = getLtqsAsIfRoot_vectorized(new_node.ltqs[:, None], new_node.getW()[:, None], new_node.tParent, xrAIRoot, 1 / xrVarsAIRoot)
+        post_ltqs = post_ltqs.flatten()
+
+        # post_ltqs_old = lik_to_post_coords(new_node.ltqs, new_node.getLtqsVars())
+        centered_query = (post_ltqs - NNInfo['subtracted_mean'])[:, None]
+        normalized_query = centered_query / np.linalg.norm(centered_query)
+        index, nns = getApproxNNs(normalized_query, index=NNInfo['index'],
+                                  k=20 * runConfigs['kNN'], pointsIds=[new_node.nodeInd], addPoints=False)
 
         nns = np.array(index.IDs)[nns]
         # Make list of unique neighbors that are not the node itself
@@ -2659,7 +2694,7 @@ class Tree:
         return edge_list, dist_list, orig_vert_names, starryYN, nodeIndToNode
 
     def getEdgeVertInfo(self, coords_folder=None, verbose=False, store_posterior_ltqs=False,
-                        undo_rescale_by_var=True, variances=None):
+                        geneDiffusionScaling=None, variances=None):
         edgeList, distList, nodeIndToVertId, _, nodeIndToNode = self.compile_tree_from_scData_tree()
         if coords_folder is not None:
             if not store_posterior_ltqs:
@@ -2689,13 +2724,13 @@ class Tree:
                             ltqs.append(nodeIndToNode[nodeInd].ltqs)
                             ltqsVars.append(nodeIndToNode[nodeInd].getLtqsVars())
                         else:
-                            if undo_rescale_by_var:
+                            if geneDiffusionScaling == 'geneVariances':
                                 # This means we have to undo the rescaling that was done before
                                 node_ltqs_post = nodeIndToNode[nodeInd].ltqsAIRoot * np.sqrt(variances)
                                 node_ltqsVars_post = nodeIndToNode[nodeInd].getLtqsVars(AIRoot=True) * variances
                             else:
-                                node_ltqs_post = nodeIndToNode[nodeInd].ltqsAIRoot
-                                node_ltqsVars_post = nodeIndToNode[nodeInd].getLtqsVars(AIRoot=True)
+                                node_ltqs_post = nodeIndToNode[nodeInd].ltqsAIRoot * np.sqrt(geneDiffusionScaling)
+                                node_ltqsVars_post = nodeIndToNode[nodeInd].getLtqsVars(AIRoot=True) * geneDiffusionScaling
                             ltqs.append(node_ltqs_post)
                             ltqsVars.append(node_ltqsVars_post)
                         # ltqsfile.write('\t'.join(np.char.mod('%.8e', nodeIndToNode[nodeInd].ltqs)) + '\n')
@@ -3964,6 +3999,24 @@ def getLtqsAsIfRoot(nodeLtqs_g, nodeW_g, tConn, rootLtqs_g, rootW_g):
 
 
 # Used
+def getLtqsAsIfRoot_vectorized(nodeLtqs_gi, nodeW_gi, tConn_i, rootLtqs_g, rootW_g):
+    # To get the ltqs and W of a node where all other node-positions have been integrated out, we can view it as
+    # the root. We can shift the root-position along an edge by first subtracting from the root's position the
+    # contribution of the node itself, then adding the remaining root-contribution to the position of the node
+    rootW_g = rootW_g[:, None]
+    rootLtqs_g = rootLtqs_g[:, None]
+    # TODO: Check if this can be done more efficiently
+    wbarNode_gi = 1 / (tConn_i + 1 / nodeW_gi)
+    rootMinusNodeW_gi = rootW_g - wbarNode_gi
+    rootMinusNodeLtqs_gi = (rootLtqs_g * rootW_g - wbarNode_gi * nodeLtqs_gi) / rootMinusNodeW_gi
+
+    wbarRoot_gi = 1 / (tConn_i + 1 / rootMinusNodeW_gi)
+    nodePlusRootW_gi = nodeW_gi + wbarRoot_gi
+    nodePlusRootLtqs_gi = (nodeLtqs_gi * nodeW_gi + wbarRoot_gi * rootMinusNodeLtqs_gi) / nodePlusRootW_gi
+    return nodePlusRootLtqs_gi, nodePlusRootW_gi
+
+
+# Used
 def getLtqsAfterChildUpdate(nodeLtqs_g, nodeW_g, tConn, oldChLtqs_g, oldChLtqsVars_g, newChLtqs_g, newChLtqsVars_g):
     wbarOldCh_g = 1 / (tConn + oldChLtqsVars_g)
     wbarNewCh_g = 1 / (tConn + newChLtqsVars_g)
@@ -4108,3 +4161,41 @@ def getEdgeDistVertNamesFromNode(node, edge_list, dist_list, orig_vert_names, in
                                                                                                         intCounter,
                                                                                                         nodeIndToNode)
     return edge_list, dist_list, orig_vert_names, intCounter, nodeIndToNode
+
+
+def lik_to_post_coords_old(ltqs_lik, ltqsVars_lik):
+    vectorYN = False
+    if ltqs_lik.ndim == 1:
+        vectorYN = True
+        ltqs_lik = ltqs_lik[:, None]
+        ltqsVars_lik = ltqsVars_lik[:, None]
+    geneMeans = bs_glob.geneMeans
+
+    # Bonsai usually works with coordinates for the likelihood expression, but for the nearest-neighbor search
+    # we want to use maximal posterior ltqs. Therefore, we (re-)introduce a Gaussian prior. Before this, we first want
+    # to undo the shift by the gene-mean and the rescaling for the diffusion prior:
+    if bs_glob.geneDiffusionScaling != 'geneVariances':
+        # In this case, gene-variances used for diffusion rescaling and for the prior are different, since the
+        # diffusion rescaling is just a single scalar
+        diffusion_scaling = bs_glob.geneDiffusionScaling
+        ltqsVars_retransformed = ltqsVars_lik * diffusion_scaling
+        # The correct formula for undoing the transformation would be
+        # ltqs_retransformed = ltqs_lik * np.sqrt(diffusion_scaling) - geneMeans[:, None]
+        # But we want to re-do the diffusion rescaling after, so it's more efficient to do it here
+        ltqs_retransformed = ltqs_lik - geneMeans[:, None] / np.sqrt(diffusion_scaling)
+        rev_factor = (1 / (1 + (ltqsVars_retransformed / bs_glob.geneVariances[:, None])))
+        ltqs_post = ltqs_retransformed * rev_factor
+    else:
+        # In this case, both vectors of gene-variances are the same, such that some steps simplify
+        # ltqsVars_retransformed = ltqsVars_lik * diffusion_scaling
+        # The correct formula for undoing the transformation would be
+        # ltqs_retransformed = ltqs_lik * np.sqrt(diffusion_scaling) - geneMeans[:, None]
+        # But we want to re-do the diffusion rescaling after, so it's more efficient to do it here
+        gene_variances = bs_glob.geneVariances[:, None]
+        ltqs_retransformed = ltqs_lik - geneMeans[:, None] / np.sqrt(gene_variances)
+        rev_factor = (1 / (1 + ltqsVars_lik))
+        ltqs_post = ltqs_retransformed * rev_factor
+
+    if vectorYN:
+        return ltqs_post.flatten()
+    return ltqs_post
