@@ -353,6 +353,8 @@ for ind_dataset, dist_objct in enumerate(dist_objcts):
         data_type = 'UMAP'
     elif data_type[:3] == 'pca':
         data_type = 'PCA'
+    elif data_type[:5] == 'phate':
+        data_type = 'PHATE'
     # dataset_names.append("{}\n{}-cell-clusters".format(data_type, dist_objct.n_cells_per_clst))
     dataset_names.append("{}".format(data_type))
     ncpcs.append(dist_objct.n_cells_per_clst)
