@@ -26,7 +26,8 @@ os.chdir(parent_dir)
 
 from bonsai.bonsai_helpers import str2bool, find_latest_tree_folder
 from knn_recall_helpers import get_pdists_on_tree, Dataset, compare_pdists_to_truth_per_cell, \
-    compare_pdists_to_truth_per_cell_adjusted, compare_nearest_neighbours_to_truth, do_pca, fit_umap, fit_phate
+    compare_pdists_to_truth_per_cell_adjusted, compare_nearest_neighbours_to_truth, do_pca, fit_umap, fit_phate, \
+    fit_DTNE
 
 parser = ArgumentParser(
     description='Runs Bonsai on several simulated datasets.')
@@ -62,6 +63,8 @@ parser.add_argument('--n_pcs_umap', type=int, default=100,
                     help="Number of PCA components to project to before UMAP.")
 parser.add_argument('--n_pcs_phate', type=int, default=100,
                     help="Number of PCA components to project to before PHATE.")
+parser.add_argument('--n_pcs_dtne', type=int, default=100,
+                    help="Number of PCA components to project to before DTNE.")
 
 args = parser.parse_args()
 print(args)
@@ -86,6 +89,8 @@ if args.n_pcs_umap > 0:
     PCA_COMPS.append(args.n_pcs_umap)
 if args.n_pcs_phate > 0:
     PCA_COMPS.append(args.n_pcs_phate)
+if args.n_pcs_dtne > 0:
+    PCA_COMPS.append(args.n_pcs_dtne)
 
 seed = args.seed
 
@@ -115,6 +120,8 @@ dist_objcts = []
 # pca_dist_objcts = []
 
 num_dims = num_dims_list[0]
+
+methods = ['bonsai', 'pca', 'umap', 'phate', 'DTNE']
 
 for ind_dim, n_cells_per_clst in enumerate(n_cells_per_clst_list):
     n_cells = n_clsts * n_cells_per_clst
@@ -183,37 +190,58 @@ for ind_dim, n_cells_per_clst in enumerate(n_cells_per_clst_list):
         delta_gc = delta_gc.iloc[:, subset_cells]
         pca_projected = do_pca(delta_gc, n_comps_list=PCA_COMPS)
 
-        # Perform UMAP.
-        umap_projected = {}
-        if args.n_pcs_umap < 0:
-            preprocessed = delta_gc
-        else:
-            preprocessed = pca_projected[args.n_pcs_umap]
-        umap_projected[args.n_pcs_umap] = fit_umap(preprocessed, random_state=None, n_neighbors=15, min_dist=0.1,
-                                           n_components=2,
-                                           metric='euclidean',
-                                           make_plot=False, title='')
+        if 'umap' in methods:
+            # Perform UMAP.
+            umap_projected = {}
+            if args.n_pcs_umap < 0:
+                preprocessed = delta_gc
+            else:
+                preprocessed = pca_projected[args.n_pcs_umap]
+            umap_projected[args.n_pcs_umap] = fit_umap(preprocessed, random_state=None, n_neighbors=15, min_dist=0.1,
+                                               n_components=2,
+                                               metric='euclidean',
+                                               make_plot=False, title='')
 
-        # Perform PHATE.
-        phate_projected = {}
-        if args.n_pcs_phate < 0:
-            preprocessed = delta_gc
-        else:
-            preprocessed = pca_projected[args.n_pcs_phate]
-        phate_projected[args.n_pcs_phate] = fit_phate(preprocessed)
+        if 'phate' in methods:
+            # Perform PHATE.
+            phate_projected = {}
+            if args.n_pcs_phate < 0:
+                preprocessed = delta_gc
+            else:
+                preprocessed = pca_projected[args.n_pcs_phate]
+            phate_projected[args.n_pcs_phate] = fit_phate(preprocessed)
 
-        # Calculate pairwise distances for 2D-PCA, UMAP
-        pca_dists = distance.pdist(pca_projected[2].T, metric='sqeuclidean') / 2
+        if 'DTNE' in methods:
+            # Perform DTNE.
+            DTNE_projected = {}
+            if args.n_pcs_dtne < 0:
+                preprocessed = delta_gc_true
+            else:
+                preprocessed = pca_projected[args.n_pcs_dtne]
+            DTNE_projected[args.n_pcs_dtne] = fit_DTNE(preprocessed)
 
-        umap_proj = umap_projected[args.n_pcs_umap]
-        umap_dists = distance.pdist(umap_proj.T, metric='sqeuclidean') / 2
-
-        phate_proj = phate_projected[args.n_pcs_phate]
-        phate_dists = distance.pdist(phate_proj.T, metric='sqeuclidean') / 2
+        if DO_OTHER_TOOLS:
+            # Calculate pairwise distances for 2D-PCA, UMAP
+            if 'pca' in methods:
+                pca_dists = distance.pdist(pca_projected[2].T, metric='sqeuclidean') / 2
+    
+            if 'umap' in methods:
+                umap_proj = umap_projected[args.n_pcs_umap]
+                umap_dists = distance.pdist(umap_proj.T, metric='sqeuclidean') / 2
+    
+            if 'phate' in methods:
+                phate_proj = phate_projected[args.n_pcs_phate]
+                phate_dists = distance.pdist(phate_proj.T, metric='sqeuclidean') / 2
+    
+            if 'DTNE' in methods:
+                DTNE_proj = DTNE_projected[args.n_pcs_dtne]
+                DTNE_dists = distance.pdist(DTNE_proj.T, metric='sqeuclidean') / 2
 
     datasets = []
+    dist_dict = {'delta_true': true_dists, 'bonsai': bonsai_dists, 'pca': pca_dists,
+                 'umap_{}'.format(args.n_pcs_umap): umap_dists, 'phate_{}'.format(args.n_pcs_phate): phate_dists,
+                 'DTNE_{}'.format(args.n_pcs_dtne): DTNE_dists}
 
-    dist_dict = {'delta_true': true_dists, 'bonsai': bonsai_dists, 'pca': pca_dists, 'umap_{}'.format(args.n_pcs_umap): umap_dists, 'phate_{}'.format(args.n_pcs_phate): phate_dists}
     for data_type, distances in dist_dict.items():
         data_id = data_type + ' {}_dims'.format(num_dims)
         datasets.append(
@@ -221,6 +249,16 @@ for ind_dim, n_cells_per_clst in enumerate(n_cells_per_clst_list):
         datasets[-1].n_cells_per_clst = n_cells_per_clst
         if data_type[:10] != 'delta_true':
             dist_objcts.append(datasets[-1])
+
+    data_types_unordered = [ds.data_type.split('_')[0] for ds in datasets]
+    index_map = {val: idx for idx, val in enumerate(methods)}
+    index_map['delta'] = len(index_map)
+    indices = [index_map[item] for item in data_types_unordered]
+    datasets_ordered = [None] * (len(methods) + 1)
+    for ind_ds, ds in enumerate(datasets):
+        datasets_ordered[indices[ind_ds]] = ds
+    # dataset_subset_ordered = [dataset_subset[ind] for dataset in dataset_subset]
+    datasets = datasets_ordered
 
     axs_col = axs[ind_dim]
     # avg_rel_diff_list = compare_pdists_to_truth(dataset_subset, make_fig=True, axs=axs_col, axs2=axs2, axs3=axs3,
@@ -280,6 +318,8 @@ for ind_dataset, dist_objct in enumerate(dist_objcts):
         data_type = 'PCA'
     elif data_type[:5] == 'phate':
         data_type = 'PHATE'
+    elif data_type[:4] == 'DTNE':
+        data_type = 'DTNE'
     # dataset_names.append("{}\n{}-cell-clusters".format(data_type, dist_objct.n_cells_per_clst))
     dataset_names.append("{}".format(data_type))
     ncpcs.append(dist_objct.n_cells_per_clst)
@@ -288,7 +328,10 @@ for ind_dataset, dist_objct in enumerate(dist_objcts):
     plot_colors.append(dist_objct.data_type_color)
 
 combined = list(zip(dataset_names, pearsonRSqs, logRatios, plot_colors, ncpcs))
-combined_sorted = sorted(combined, key=lambda x: x[0].lower())
+print(dataset_names)
+order_map = {value.lower(): index for index, value in enumerate(methods)}
+combined_sorted = sorted(combined, key=lambda x: order_map[x[0].lower()])
+# combined_sorted = sorted(combined, key=lambda x: x[0].lower())
 dataset_names_sorted, pearsonRSqs_sorted, logRatios_sorted, plot_colors_sorted, ncpcs_sorted = zip(*combined_sorted)
 dataset_names_sorted = [(ds_name.capitalize() if ds_name == 'bonsai' else ds_name) for ds_name in dataset_names_sorted]
 n_boxes = len(n_cells_per_clst_list)
