@@ -133,7 +133,7 @@ def fit_poincare_map(data, path_to_data=None, path_to_poincaremap=None):
 
     data_df = pd.DataFrame(data.T, columns=['Gene_{}'.format(ind) for ind in range(data.shape[0])])
     # data_df['labels'] = ['same'] * data.shape[1]
-    data_df.to_csv(os.path.join(path_to_data, 'input_data.csv'))
+    data_df.to_csv(os.path.join(path_to_data, 'input_data.csv'), index=False)
 
     # Set output path
     output_path = path_to_data
