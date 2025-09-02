@@ -153,7 +153,7 @@ def fit_poincare_map(data, path_to_data=None, path_to_poincaremap=None):
     return embedding_coords.T
 
 
-def plot_poincare_map(embedding, colors, ax=None):
+def plot_poincare_map(embedding, colors, ax=None, zoom=False):
     if ax is None:
         fig, ax = plt.subplots()
 
