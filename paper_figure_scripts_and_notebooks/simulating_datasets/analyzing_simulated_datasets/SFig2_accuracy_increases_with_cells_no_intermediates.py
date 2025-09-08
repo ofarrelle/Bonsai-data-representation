@@ -26,7 +26,8 @@ os.chdir(parent_dir)
 
 from bonsai.bonsai_helpers import str2bool, find_latest_tree_folder
 from knn_recall_helpers import get_pdists_on_tree, Dataset, compare_pdists_to_truth_per_cell, \
-    compare_pdists_to_truth_per_cell_adjusted, compare_nearest_neighbours_to_truth, do_pca, fit_umap, fit_phate
+    compare_pdists_to_truth_per_cell_adjusted, compare_nearest_neighbours_to_truth, do_pca, fit_umap, fit_phate, \
+    fit_DTNE
 
 parser = ArgumentParser(
     description='Runs Bonsai on several simulated datasets.')
@@ -62,6 +63,8 @@ parser.add_argument('--n_pcs_umap', type=int, default=100,
                     help="Number of PCA components to project to before UMAP.")
 parser.add_argument('--n_pcs_phate', type=int, default=100,
                     help="Number of PCA components to project to before PHATE.")
+parser.add_argument('--n_pcs_dtne', type=int, default=100,
+                    help="Number of PCA components to project to before DTNE.")
 
 args = parser.parse_args()
 print(args)
@@ -80,13 +83,14 @@ plt.rc('legend', fontsize=SMALL_SIZE)  # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 """Constants"""
-RECALCULATE = True
 DO_OTHER_TOOLS = True
 PCA_COMPS = [2]
 if args.n_pcs_umap > 0:
     PCA_COMPS.append(args.n_pcs_umap)
 if args.n_pcs_phate > 0:
     PCA_COMPS.append(args.n_pcs_phate)
+if args.n_pcs_dtne > 0:
+    PCA_COMPS.append(args.n_pcs_dtne)
 
 seed = args.seed
 
@@ -117,6 +121,8 @@ dist_objcts = []
 
 num_dims = num_dims_list[0]
 
+methods = ['bonsai', 'pca', 'umap', 'phate', 'DTNE']
+
 for ind_dim, n_cells_per_clst in enumerate(n_cells_per_clst_list):
     n_cells = n_clsts * n_cells_per_clst
 
@@ -135,7 +141,7 @@ for ind_dim, n_cells_per_clst in enumerate(n_cells_per_clst_list):
     subset_cells = np.arange(0, n_cells, n_cells_per_clst, dtype=int)
     args.input_simulated_dataset = data_path
     args.bonsai_results = os.path.join(results_path, find_latest_tree_folder(results_folder=results_path))
-    args.output_folder = os.path.join('useful_scripts_not_bonsai/simulating_datasets/analyzing_simulated_datasets/results', dataset)
+    args.output_folder = os.path.join('paper_figure_scripts_and_notebooks/simulating_datasets/analyzing_simulated_datasets/results', dataset)
     # args.input_simulated_dataset = 'data/simulated_datasets/simulated_equidistant_clean/simulate_equidistant_{}_clsts_{}_cells_{}_dims_random_times_no_umi_counts_add_noise_2_seed_1231'.format(
     #     n_clsts, n_cells, num_dims)
     # args.bonsai_results = 'results/simulated_datasets/simulated_equidistant_clean/simulate_equidistant_{}_clsts_{}_cells_{}_dims_random_times_no_umi_counts_add_noise_2_seed_1231/final_bonsai_zscore1.0'.format(
@@ -154,77 +160,38 @@ for ind_dim, n_cells_per_clst in enumerate(n_cells_per_clst_list):
 
 
     # Get cell-ids
-    if (not RECALCULATE) and os.path.exists(os.path.join(args.output_folder, 'intermediate_files', 'cellID.txt')):
+    try:
+        umi_counts_df = pd.read_csv(os.path.join(args.input_simulated_dataset, 'Gene_table.txt'), header=0,
+                                    index_col=0,
+                                    sep='\t')
+        cell_ids = list(umi_counts_df.columns)
+    except FileNotFoundError:
         cell_ids = []
-        with open(os.path.join(args.output_folder, 'intermediate_files', 'cellID.txt'), 'r') as file:
+        with open(os.path.join(args.input_simulated_dataset, 'cellID.txt'), 'r') as file:
             reader = csv.reader(file, delimiter="\t")
             for row in reader:
                 cell_ids.append(row[0])
-    else:
-        try:
-            umi_counts_df = pd.read_csv(os.path.join(args.input_simulated_dataset, 'Gene_table.txt'), header=0,
-                                        index_col=0,
-                                        sep='\t')
-            cell_ids = list(umi_counts_df.columns)
-        except FileNotFoundError:
-            cell_ids = []
-            with open(os.path.join(args.input_simulated_dataset, 'cellID.txt'), 'r') as file:
-                reader = csv.reader(file, delimiter="\t")
-                for row in reader:
-                    cell_ids.append(row[0])
 
     # Calculate pairwise distances for ground truth
-    if RECALCULATE or (
-            not os.path.exists(os.path.join(args.output_folder, 'intermediate_files', 'delta_true_pdists.npy'))):
-        delta_gc_true = pd.read_csv(os.path.join(args.input_simulated_dataset, 'delta_true.txt'), header=None,
-                                    index_col=None,
-                                    sep='\t')
-        delta_gc_true = delta_gc_true.iloc[:, subset_cells]
-        true_dists = distance.pdist(delta_gc_true.T, metric='sqeuclidean') / num_dims
-        np.save(os.path.join(args.output_folder, 'intermediate_files', 'delta_true_pdists.npy'), true_dists,
-                allow_pickle=False)
+    delta_gc_true = pd.read_csv(os.path.join(args.input_simulated_dataset, 'delta_true.txt'), header=None,
+                                index_col=None,
+                                sep='\t')
+    delta_gc_true = delta_gc_true.iloc[:, subset_cells]
+    true_dists = distance.pdist(delta_gc_true.T, metric='sqeuclidean') / num_dims
 
     # Calculate pairwise distances for Bonsai.
-    if RECALCULATE or (
-            not os.path.exists(os.path.join(args.output_folder, 'intermediate_files', 'bonsai_pdists.npy'))):
-        bonsai_dists = get_pdists_on_tree(os.path.join(args.bonsai_results, 'tree.nwk'), cell_ids)
-        bonsai_dists = squareform(squareform(bonsai_dists)[subset_cells, :][:, subset_cells])
-        np.save(os.path.join(args.output_folder, 'intermediate_files', 'bonsai_pdists.npy'), bonsai_dists,
-                allow_pickle=False)
+    bonsai_dists = get_pdists_on_tree(os.path.join(args.bonsai_results, 'tree.nwk'), cell_ids)
+    bonsai_dists = squareform(squareform(bonsai_dists)[subset_cells, :][:, subset_cells])
 
     if DO_OTHER_TOOLS:
-        # Perform PCA-projection.
-        all_pca_files = [os.path.basename(filepath) for filepath in
-                         Path(os.path.join(args.output_folder, 'intermediate_files')).glob('pca_*.npy')]
-        all_pca_files = [filepath for filepath in all_pca_files if 'pdists' not in filepath]
-        if (not RECALCULATE) and len(all_pca_files):
-            pca_projected = {}
-            for pca_file in all_pca_files:
-                n_comps = int(pca_file.split('pca_')[1].split('.npy')[0])
-                pca_projected[n_comps] = np.load(os.path.join(args.output_folder, 'intermediate_files', pca_file),
-                                                 allow_pickle=False)
-        else:
-            delta_gc = pd.read_csv(os.path.join(args.input_simulated_dataset, 'delta.txt'), header=None,
-                                   index_col=None,
-                                   sep='\t')
-            delta_gc = delta_gc.iloc[:, subset_cells]
-            pca_projected = do_pca(delta_gc, n_comps_list=PCA_COMPS)
-            for n_comps, pca_proj in pca_projected.items():
-                np.save(os.path.join(args.output_folder, 'intermediate_files', 'pca_{}.npy'.format(n_comps)), pca_proj,
-                        allow_pickle=False)
+        delta_gc = pd.read_csv(os.path.join(args.input_simulated_dataset, 'delta.txt'), header=None,
+                               index_col=None,
+                               sep='\t')
+        delta_gc = delta_gc.iloc[:, subset_cells]
+        pca_projected = do_pca(delta_gc, n_comps_list=PCA_COMPS)
 
-        
-        # Perform UMAP.
-        all_umap_files = [os.path.basename(filepath) for filepath in
-                          Path(os.path.join(args.output_folder, 'intermediate_files')).glob('umap_*.npy')]
-        all_umap_files = [filepath for filepath in all_umap_files if 'pdists' not in filepath]
-        if (not RECALCULATE) and len(all_umap_files):
-            umap_projected = {}
-            for umap_file in all_umap_files:
-                n_comps = int(umap_file.split('umap_')[1].split('.npy')[0])
-                umap_projected[n_comps] = np.load(os.path.join(args.output_folder, 'intermediate_files', umap_file),
-                                                  allow_pickle=False)
-        else:
+        if 'umap' in methods:
+            # Perform UMAP.
             umap_projected = {}
             if args.n_pcs_umap < 0:
                 preprocessed = delta_gc
@@ -234,83 +201,64 @@ for ind_dim, n_cells_per_clst in enumerate(n_cells_per_clst_list):
                                                n_components=2,
                                                metric='euclidean',
                                                make_plot=False, title='')
-            np.save(os.path.join(args.output_folder, 'intermediate_files', 'umap_{}.npy'.format(n_comps)),
-                    umap_projected[args.n_pcs_umap],
-                    allow_pickle=False)
 
-        # Perform PHATE.
-        all_phate_files = [os.path.basename(filepath) for filepath in
-                          Path(os.path.join(args.output_folder, 'intermediate_files')).glob('phate*.npy')]
-        all_phate_files = [filepath for filepath in all_phate_files if 'pdists' not in filepath]
-        if (not RECALCULATE) and len(all_phate_files):
-            phate_projected = {}
-            for phate_file in all_phate_files:
-                # n_comps = int(phate_file.split('phate_')[1].split('.npy')[0])
-                phate_projected[args.n_pcs_phate] = np.load(os.path.join(args.output_folder, 'intermediate_files', phate_file),
-                                                  allow_pickle=False)
-        else:
+        if 'phate' in methods:
+            # Perform PHATE.
             phate_projected = {}
             if args.n_pcs_phate < 0:
                 preprocessed = delta_gc
             else:
                 preprocessed = pca_projected[args.n_pcs_phate]
             phate_projected[args.n_pcs_phate] = fit_phate(preprocessed)
-            np.save(os.path.join(args.output_folder, 'intermediate_files', 'phate.npy'),
-                    phate_projected[args.n_pcs_phate],
-                    allow_pickle=False)
 
-        # Calculate pairwise distances for 2D-PCA, UMAP
-        all_pca_dist_files = [os.path.basename(filepath) for filepath in
-                              Path(os.path.join(args.output_folder, 'intermediate_files')).glob('pca_*_pdists.npy')]
-        if RECALCULATE or (not len(all_pca_dist_files)):
-            for n_comps, pca_proj in pca_projected.items():
-                if n_comps != 2:
-                    continue
-                pca_dists = distance.pdist(pca_proj.T, metric='sqeuclidean') / 2
-                np.save(os.path.join(args.output_folder, 'intermediate_files', 'pca_{}_pdists.npy'.format(n_comps)),
-                        pca_dists,
-                        allow_pickle=False)
+        if 'DTNE' in methods:
+            # Perform DTNE.
+            DTNE_projected = {}
+            if args.n_pcs_dtne < 0:
+                preprocessed = delta_gc_true
+            else:
+                preprocessed = pca_projected[args.n_pcs_dtne]
+            DTNE_projected[args.n_pcs_dtne] = fit_DTNE(preprocessed)
 
-        all_umap_dist_files = [os.path.basename(filepath) for filepath in
-                               Path(os.path.join(args.output_folder, 'intermediate_files')).glob('umap_*_pdists.npy')]
-        if RECALCULATE or (not len(all_umap_dist_files)):
-            umap_proj = umap_projected[args.n_pcs_umap]
-            for n_comps, umap_proj in umap_projected.items():
+        if DO_OTHER_TOOLS:
+            # Calculate pairwise distances for 2D-PCA, UMAP
+            if 'pca' in methods:
+                pca_dists = distance.pdist(pca_projected[2].T, metric='sqeuclidean') / 2
+    
+            if 'umap' in methods:
+                umap_proj = umap_projected[args.n_pcs_umap]
                 umap_dists = distance.pdist(umap_proj.T, metric='sqeuclidean') / 2
-                np.save(os.path.join(args.output_folder, 'intermediate_files', 'umap_{}_pdists.npy'.format(n_comps)),
-                        umap_dists, allow_pickle=False)
-
-        all_phate_dist_files = [os.path.basename(filepath) for filepath in
-                               Path(os.path.join(args.output_folder, 'intermediate_files')).glob('phate_pdists.npy')]
-        if RECALCULATE or (not len(all_phate_dist_files)):
-            phate_proj = phate_projected[args.n_pcs_phate]
-            phate_dists = distance.pdist(phate_proj.T, metric='sqeuclidean') / 2
-            np.save(os.path.join(args.output_folder, 'intermediate_files', 'phate_pdists.npy'),
-                    phate_dists, allow_pickle=False)
-
-    if DO_OTHER_TOOLS:
-        alldistfiles = list(Path(os.path.join(args.output_folder, 'intermediate_files')).glob('*_pdists.npy'))
-    else:
-        alldistfiles = list(Path(os.path.join(args.output_folder, 'intermediate_files')).glob('*bonsai*_pdists.npy'))
-        alldistfiles += list(Path(os.path.join(args.output_folder, 'intermediate_files')).glob('*true*_pdists.npy'))
-
-    alldistfiles = natsorted(alldistfiles)
+    
+            if 'phate' in methods:
+                phate_proj = phate_projected[args.n_pcs_phate]
+                phate_dists = distance.pdist(phate_proj.T, metric='sqeuclidean') / 2
+    
+            if 'DTNE' in methods:
+                DTNE_proj = DTNE_projected[args.n_pcs_dtne]
+                DTNE_dists = distance.pdist(DTNE_proj.T, metric='sqeuclidean') / 2
 
     datasets = []
-    for distfile in alldistfiles:
-        data_type = os.path.basename(distfile).split("_pdists")[0]
+    dist_dict = {'delta_true': true_dists, 'bonsai': bonsai_dists, 'pca': pca_dists,
+                 'umap_{}'.format(args.n_pcs_umap): umap_dists, 'phate_{}'.format(args.n_pcs_phate): phate_dists,
+                 'DTNE_{}'.format(args.n_pcs_dtne): DTNE_dists}
+
+    for data_type, distances in dist_dict.items():
         data_id = data_type + ' {}_dims'.format(num_dims)
         datasets.append(
-            Dataset(pdist_file=distfile, data_type=data_type, data_id=data_id, color_types=['sanity', 'bonsai', 'pca', 'umap', 'phate']))
+            Dataset(distances=distances, data_type=data_type, data_id=data_id, color_types=['sanity', 'bonsai', 'pca', 'umap', 'phate', 'DTNE']))
         datasets[-1].n_cells_per_clst = n_cells_per_clst
         if data_type[:10] != 'delta_true':
             dist_objcts.append(datasets[-1])
-        # if data_type == 'bonsai':
-        #     bonsai_dist_objcts.append(datasets[-1])
-        # elif data_type[:4] == 'umap':
-        #     umap_dist_objcts.append(datasets[-1])
-        # elif data_type[:3] == 'pca':
-        #     pca_dist_objcts.append(datasets[-1])
+
+    data_types_unordered = [ds.data_type.split('_')[0] for ds in datasets]
+    index_map = {val: idx for idx, val in enumerate(methods)}
+    index_map['delta'] = len(index_map)
+    indices = [index_map[item] for item in data_types_unordered]
+    datasets_ordered = [None] * (len(methods) + 1)
+    for ind_ds, ds in enumerate(datasets):
+        datasets_ordered[indices[ind_ds]] = ds
+    # dataset_subset_ordered = [dataset_subset[ind] for dataset in dataset_subset]
+    datasets = datasets_ordered
 
     axs_col = axs[ind_dim]
     # avg_rel_diff_list = compare_pdists_to_truth(dataset_subset, make_fig=True, axs=axs_col, axs2=axs2, axs3=axs3,
@@ -370,6 +318,8 @@ for ind_dataset, dist_objct in enumerate(dist_objcts):
         data_type = 'PCA'
     elif data_type[:5] == 'phate':
         data_type = 'PHATE'
+    elif data_type[:4] == 'DTNE':
+        data_type = 'DTNE'
     # dataset_names.append("{}\n{}-cell-clusters".format(data_type, dist_objct.n_cells_per_clst))
     dataset_names.append("{}".format(data_type))
     ncpcs.append(dist_objct.n_cells_per_clst)
@@ -378,7 +328,10 @@ for ind_dataset, dist_objct in enumerate(dist_objcts):
     plot_colors.append(dist_objct.data_type_color)
 
 combined = list(zip(dataset_names, pearsonRSqs, logRatios, plot_colors, ncpcs))
-combined_sorted = sorted(combined, key=lambda x: x[0].lower())
+print(dataset_names)
+order_map = {value.lower(): index for index, value in enumerate(methods)}
+combined_sorted = sorted(combined, key=lambda x: order_map[x[0].lower()])
+# combined_sorted = sorted(combined, key=lambda x: x[0].lower())
 dataset_names_sorted, pearsonRSqs_sorted, logRatios_sorted, plot_colors_sorted, ncpcs_sorted = zip(*combined_sorted)
 dataset_names_sorted = [(ds_name.capitalize() if ds_name == 'bonsai' else ds_name) for ds_name in dataset_names_sorted]
 n_boxes = len(n_cells_per_clst_list)
@@ -415,7 +368,7 @@ else:
 plt.tight_layout()
 
 # base_folder = '/Users/Daan/Documents/postdoc/bonsai-development/data/simulated_datasets/simulated_equidistant_clean'
-base_folder = os.path.join('useful_scripts_not_bonsai/simulating_datasets/analyzing_simulated_datasets/results', args.input_folder)
+base_folder = os.path.join('paper_figure_scripts_and_notebooks/simulating_datasets/analyzing_simulated_datasets/results', args.input_folder)
 
 plt.savefig(os.path.join(base_folder, "SI_tree_better_at_more_cells_new.svg"))
 plt.savefig(os.path.join(base_folder, "SI_tree_better_at_more_cells_new.png"), dpi=300)

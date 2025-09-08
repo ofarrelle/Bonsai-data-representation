@@ -1,4 +1,4 @@
-import os
+import os, sys
 import pandas as pd
 import numpy as np
 import umap.umap_ as umap
@@ -9,6 +9,11 @@ from scipy.sparse.csgraph import shortest_path
 from scipy.sparse import csr_matrix
 from scipy.stats import rankdata
 import logging
+import phate
+from dtne import DTNE
+from pathlib import Path
+import subprocess
+import glob
 
 FORMAT = '%(asctime)s %(name)s %(funcName)s %(message)s'
 log_level = logging.WARNING
@@ -59,6 +64,31 @@ def do_pca(data, n_comps_list=[50]):
     return pca_projected
 
 
+def fit_phate(data):
+    """
+
+    :param data: should be a numpy array with features (genes) as rows, observations (cells) as columns
+    :return:
+    """
+    data_T = data.T
+    phate_op = phate.PHATE()
+    data_phate = phate_op.fit_transform(data_T)
+
+    return data_phate[:, :2].T
+
+
+def fit_DTNE(data):
+    """
+
+    :param data: should be a numpy array with features (genes) as rows, observations (cells) as columns
+    :return:
+    """
+    data_T = data.T
+    dtne_operator = DTNE()
+    Y = dtne_operator.fit_transform(data_T)
+    return Y.T
+
+
 def fit_umap(data, random_state=42, n_neighbors=15, min_dist=0.1, n_components=2, metric='euclidean',
              make_plot=False, title=''):
     """
@@ -85,6 +115,56 @@ def fit_umap(data, random_state=42, n_neighbors=15, min_dist=0.1, n_components=2
         ax.scatter(u[:, 0], u[:, 1])
         plt.title(title, fontsize=18)
     return u.T
+
+
+def fit_poincare_map(data, path_to_data=None, path_to_poincaremap=None):
+    """
+
+    :param data: should be a numpy array with features (genes) as rows, observations (cells) as columns
+    :return:
+    """
+    if path_to_poincaremap is None:
+        exit("You should give a directory-path to the Poincare-map GitHub folder that is cloned locally.")
+
+    # Store the data somewhere
+    if path_to_data is None:
+        path_to_data = 'tmp'
+    Path(path_to_data).mkdir(parents=True, exist_ok=True)
+
+    data_df = pd.DataFrame(data.T, columns=['Gene_{}'.format(ind) for ind in range(data.shape[0])])
+    # data_df['labels'] = ['same'] * data.shape[1]
+    data_df.to_csv(os.path.join(path_to_data, 'input_data.csv'), index=False)
+
+    # Set output path
+    output_path = path_to_data
+
+    # Call the Poincare map program with subprocess
+    command1 = [os.path.join(path_to_poincaremap, 'main.py'), '--dset', 'input_data', '--path', path_to_data + '/', '--dest', path_to_data + '/', '--cuda', '0', '--labels', '0']
+    output1 = subprocess.run([sys.executable] + command1, stdout=subprocess.PIPE, text=True)
+    print(output1.stdout)
+    print(output1.stderr)
+
+    # Read in the resulting coordinates
+    # Find filename
+    result_file = glob.glob(os.path.join(path_to_data, 'input_data_PM*.csv'))[0]
+    embedding_coords = pd.read_csv(result_file, header=None, index_col=None).values
+
+    # Return the coordinates in the right format
+    return embedding_coords.T
+
+
+def plot_poincare_map(embedding, colors, ax=None, zoom=False):
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    circle = plt.Circle((0, 0), radius=1, fc='none', color='black')
+    ax.add_patch(circle)
+    ax.plot(0, 0, 'x', c=(0, 0, 0), ms=5)
+
+    ax.scatter(embedding[0, :], embedding[1, :], s=5, c=colors)
+    ax.plot(0, 0, 'x', c=(1, 1, 1), ms=5)
+    ax.axis('off')
+    ax.set_aspect('equal')  # instead of plt.axis('equal')
 
 
 def get_pdists_on_tree(nwk_file, cell_ids):
