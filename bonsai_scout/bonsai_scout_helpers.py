@@ -1064,11 +1064,13 @@ class Bonvis_figure:
             else:
                 if node_style['verts_masked'] is None:
                     verts_masked = []
-                    if node_style['cells_masked'] is not None:
+                    if (node_style['cells_masked'] is not None) and (len(node_style['cells_masked']) != 0):
                         cell_ind_to_vert_ind = np.array(
                             self.bonvis_metadata.cell_info['cell_info_dict']['cell_ind_to_vert_ind'])
                         verts_masked = list(cell_ind_to_vert_ind[np.array(node_style['cells_masked'])])
                         verts_masked = np.union1d(verts_masked, self.bonvis_metadata.cell_info['int_vert_inds'])
+                    elif node_style['cells_masked'] is not None: # avoid problematic array indexing for empty mask
+                        verts_masked = self.bonvis_metadata.cell_info['int_vert_inds']
                     cell_to_celltype = cell_to_celltype.astype(str)
                     cell_to_celltype[verts_masked] = np.nan
                     cell_to_color[verts_masked] = masked_color
