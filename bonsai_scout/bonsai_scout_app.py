@@ -34,6 +34,7 @@ sys.path.append(parent_dir)
 # TODO: REMOVE THIS LATER. Just for debugging.
 # results_folder = '/Users/Daan/Documents/postdoc/collaborations/westendorp_CHKi/bonsai_cellstates_clustered_new'
 # results_folder = '/Users/Daan/Documents/postdoc/Private-bonsai/results/hao_satija_2021_paper_figure/cs_summed/bonsai'
+# results_folder = '/Users/Daan/Documents/postdoc/Private-bonsai/results/hao_satija_2021_paper_figure/mergedgenes_no_TMono_hao_satija/cs_summed/bonsai'
 # settings_filename = 'bonsai_vis_settings.json'
 # os.environ['BONSAI_DATA_PATH'] = os.path.abspath(os.path.join(results_folder, 'bonsai_vis_data.hdf'))
 # os.environ['BONSAI_SETTINGS_PATH'] = os.path.abspath(os.path.join(results_folder, settings_filename))
@@ -1102,7 +1103,7 @@ def server(input, output, session: Session):
             scale_nodes = 1/1.5
             bv_objct.click_counters['nodes_smaller'] = input.nodes_smaller_fast()
         
-        # Determine if nodes should be resized
+        # Determine if edges should be resized
         scale_edges = None
         if input.edges_thicker() != bv_objct.click_counters['edges_thicker']:
             scale_edges = 1.5
