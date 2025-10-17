@@ -940,12 +940,17 @@ class Bonvis_figure:
             min_vert_size = np.min(non_int_vert_to_size)
             if max_vert_size < 8:
                 max_rescaling = 1.5
+            else:
+                max_rescaling = min(np.sqrt(max_vert_size/min_vert_size), 8)
             # if len(np.unique(vert_to_size_raw)) == 2:
             #     max_rescaling = 1
             if max_vert_size != min_vert_size:
                 vert_to_size[self.bonvis_metadata.cell_info['non_int_vert_inds']] = node_style['radius_cell'] * (
                             1 + np.sqrt(
                         (non_int_vert_to_size - min_vert_size) / (max_vert_size - min_vert_size)) * (max_rescaling - 1))
+                # vert_to_size[self.bonvis_metadata.cell_info['non_int_vert_inds']] = node_style['radius_cell'] * (
+                #             1 + np.log(1 + (np.exp(1) - 1) * 
+                #         (non_int_vert_to_size - min_vert_size) / (max_vert_size - min_vert_size)) * (max_rescaling - 1))
             else:
                 vert_to_size[self.bonvis_metadata.cell_info['non_int_vert_inds']] = np.ones_like(non_int_vert_to_size) * \
                                                                                     node_style['radius_cell']
