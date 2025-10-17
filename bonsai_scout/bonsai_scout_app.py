@@ -33,7 +33,7 @@ sys.path.append(parent_dir)
 
 # TODO: REMOVE THIS LATER. Just for debugging.
 # results_folder = '/Users/Daan/Documents/postdoc/collaborations/westendorp_CHKi/bonsai_cellstates_clustered_new'
-# results_folder = '/Users/Daan/Documents/postdoc/bonsai-development/results/hao_satija_2021-CITEseq-immune_cells'
+# results_folder = '/Users/Daan/Documents/postdoc/Private-bonsai/results/hao_satija_2021_paper_figure/cs_summed/bonsai'
 # settings_filename = 'bonsai_vis_settings.json'
 # os.environ['BONSAI_DATA_PATH'] = os.path.abspath(os.path.join(results_folder, 'bonsai_vis_data.hdf'))
 # os.environ['BONSAI_SETTINGS_PATH'] = os.path.abspath(os.path.join(results_folder, settings_filename))
@@ -166,6 +166,12 @@ app_ui = ui.page_sidebar(
                     # ui.input_action_button("nodes_smaller", ICONS['minus'], class_="btn-light d-flex justify-content-center align-items-center me-1"),
                     # ui.input_action_button("nodes_bigger", ICONS['plus'], class_="btn-light d-flex justify-content-center align-items-center me-1"),
                     ui.input_action_button("nodes_bigger_fast", ICONS['big_plus'], class_="btn-light d-flex justify-content-center align-items-center"),
+                    style="display: flex; flex-wrap: nowrap; gap: 0.3em;"
+                ),
+                ui.h6("Scale edge width:"),
+                ui.span(
+                    ui.input_action_button("edges_thinner", ICONS['big_minus'], class_="btn-light d-flex justify-content-center align-items-center me-1"),
+                    ui.input_action_button("edges_thicker", ICONS['big_plus'], class_="btn-light d-flex justify-content-center align-items-center"),
                     style="display: flex; flex-wrap: nowrap; gap: 0.3em;"
                 ),
             ),
@@ -1095,6 +1101,15 @@ def server(input, output, session: Session):
         if input.nodes_smaller_fast() != bv_objct.click_counters['nodes_smaller']:
             scale_nodes = 1/1.5
             bv_objct.click_counters['nodes_smaller'] = input.nodes_smaller_fast()
+        
+        # Determine if nodes should be resized
+        scale_edges = None
+        if input.edges_thicker() != bv_objct.click_counters['edges_thicker']:
+            scale_edges = 1.5
+            bv_objct.click_counters['edges_thicker'] = input.edges_thicker()
+        if input.edges_thinner() != bv_objct.click_counters['edges_thinner']:
+            scale_edges = 1/1.5
+            bv_objct.click_counters['edges_thinner'] = input.edges_thinner()
 
         # Determine if nodes should be recolored
         if node_style.get() is None:
@@ -1140,7 +1155,7 @@ def server(input, output, session: Session):
         #         n_clusters = input.n_clusters()
         #         # ui.update_slider("curvature", value=0)
 
-        kwarg_list = [geometry, zoom, scale_nodes, origin, node_style_upd,
+        kwarg_list = [geometry, zoom, scale_nodes, scale_edges, origin, node_style_upd,
                       size_style_upd, ly_type, tweak_inds, new_flip_id,
                       multip_angle, ax_lims, zoom_ax_lims, reset_now, renew_mask_fig]
         if any(v is not None for v in kwarg_list) or (bv_objct.bonvis_fig.fig is None):
@@ -1148,6 +1163,7 @@ def server(input, output, session: Session):
                 geometry=geometry,
                 zoom=zoom,
                 scale_nodes=scale_nodes,
+                scale_edges=scale_edges,
                 origin=origin,
                 node_style=node_style_upd,
                 size_style=size_style_upd,

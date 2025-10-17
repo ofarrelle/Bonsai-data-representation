@@ -593,7 +593,7 @@ class Bonvis_figure:
         edge_style = self.bonvis_settings.edge_style
         edge_coords = self.coords_info.transf_edge_coords_eix
         self.edge_obj['coll'] = LineCollection(edge_coords, colors=edge_style['color'],
-                                               linewidths=edge_style['linewidth'])
+                                               linewidths=edge_style['linewidth'], zorder=-1)
 
     def get_bg_collection(self):
         # Create background for hyperbolic geometry
@@ -1083,18 +1083,19 @@ class Bonvis_figure:
 
     def update_figure(self, geometry=None, zoom=None, click=None, node_style=None, size_style=None, scale_nodes=None,
                       origin=None, ly_type=None, tweak_inds=None, multip_angle=None, reset_layout=None, ax_lims=None,
-                      zoom_ax_lims=None, renew_mask=False, verbose=True,
+                      zoom_ax_lims=None, renew_mask=False, verbose=True, scale_edges=None,
                       flipped_node_ids=[], new_flip_id=False):
         # TODO: Eventually remove this print-statement, nice for debugging
         if verbose:
             logging.info(
-                'geometry={}, zoom={}, click={}, node_style={}, size_style={}, scale_nodes={}, origin={}, ly_type={}, '
+                'geometry={}, zoom={}, click={}, node_style={}, size_style={}, scale_nodes={}, scale_edges={}, '
+                'origin={}, ly_type={}, '
                 'tweak_inds={}, multip_angle={}, reset_layout={}, ax_lims={}, zoom_ax_lims={}, renew_mask={}, '
                 'flipped_node_ids={}, new_flip_id={}'.format(
                     geometry, zoom, click,
                     node_style,
                     size_style,
-                    scale_nodes, origin,
+                    scale_nodes, scale_edges, origin,
                     ly_type, tweak_inds,
                     multip_angle,
                     reset_layout, ax_lims, zoom_ax_lims,
@@ -1110,6 +1111,7 @@ class Bonvis_figure:
         update_fig_coords = False
         update_sizes = False
         update_bg = False
+        update_edges = False
 
         # Define some pointers for easier syntax
         transf_info = self.bonvis_settings.transf_info
@@ -1237,6 +1239,10 @@ class Bonvis_figure:
             self.bonvis_settings.node_style['radius_cell'] *= scale_nodes
             self.bonvis_settings.node_style['lw_int'] *= scale_nodes
             self.bonvis_settings.node_style['lw_cell'] *= scale_nodes
+        
+        if scale_edges is not None:
+            update_edges = True
+            self.bonvis_settings.edge_style['linewidth'] *= scale_edges
 
         if node_style is not None:
             old_annot_type = self.bonvis_settings.node_style['annot_info'].annot_type
@@ -1277,6 +1283,8 @@ class Bonvis_figure:
             if (curr_geom == 'hyperbolic'):
                 self.update_bg()
             # self.update_bg()
+        if update_edges:
+            self.get_edge_collection()
         if update_sizes:
             self.get_node_collection()
             update_colors = False
